@@ -73,20 +73,20 @@ fun BasicMap() {
     }
 }
 
-@Composable
-fun CoolMap(startingLocation: LatLng) {
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(startingLocation, 15f)
+    @Composable
+    fun CoolMap(startingLocation: LatLng) {
+        val cameraPositionState = rememberCameraPositionState {
+            position = CameraPosition.fromLatLngZoom(startingLocation, 15f)
+        }
+        val markerState = rememberMarkerState(position = LatLng(48.73, -122.49))
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState
+        ) {
+            AdvancedMarker(
+                state = markerState,
+                title = "Communications Facility"
+            )
+        }
     }
-    val markerState = rememberMarkerState(position = LatLng(48.73, -122.49))
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState
-    ) {
-        AdvancedMarker(
-            state = markerState,
-            title = "Communications Facility"
-        )
-    }
-}
 }
