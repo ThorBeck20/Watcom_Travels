@@ -51,6 +51,7 @@ class WTAApi {
         }
 
         // Return the street the stop is on
+        // id = StopNum
         fun getStreet(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
             val jsonObject: JSONObject = jsonArray.getJSONObject(0)
@@ -64,6 +65,7 @@ class WTAApi {
         }
 
         // Return the lighting status of the street
+        // id = StopNum
         fun getLighting(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
             val jsonObject: JSONObject = jsonArray.getJSONObject(0)
@@ -77,6 +79,7 @@ class WTAApi {
         }
 
         // Return the shelter status of the street
+        // id = StopNum
         fun getShelter(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
             val jsonObject: JSONObject = jsonArray.getJSONObject(0)
@@ -90,6 +93,7 @@ class WTAApi {
         }
 
         // Return the lighting status of the street
+        // id = StopNum
         fun getBench(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
             val jsonObject: JSONObject = jsonArray.getJSONObject(0)
@@ -103,9 +107,11 @@ class WTAApi {
         }
 
         // Returns next three predictions for a stop
+        // id = StopNum
         /* fun getPredictions(id: Int): */
 
         // Returns bulletins for a stop, if there are any
+        // id = StopNum
         /* fun getBulletins(id: Int): List<String> */
 
         // Handles getting the JSONArray for api work
