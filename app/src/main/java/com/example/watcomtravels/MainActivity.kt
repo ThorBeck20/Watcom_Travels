@@ -46,6 +46,10 @@ class MainActivity : ComponentActivity() {
             val currentLocation = 1
             val bham = LatLng(48.73, -122.49)
 
+            val favTrips = dbTrips(this)
+            val favStops = dbStops(this)
+            val recents = dbRecent(this)
+
             LaunchedEffect(true) {
                 withContext(Dispatchers.IO) {
                     stops.addAll(WTAApi.getStopObjets())
