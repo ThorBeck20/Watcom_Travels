@@ -4,6 +4,7 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import org.json.JSONStringer
 import java.net.URL
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
@@ -32,7 +33,7 @@ class WTAApi {
         // List contains only errObj in event of WTA API errors
         fun getStopObjets(): List<StopObject> {
             val stopList = mutableListOf<StopObject>()
-            val jsonArray = callAPI("https://api.ridewta.com/stops")
+            val jsonArray: JSONArray = callAPI("https://api.ridewta.com/stops")
 
             if (jsonArray == null) {
                 val errObj = StopObject(-1, "System error", 48.73.toFloat(),
