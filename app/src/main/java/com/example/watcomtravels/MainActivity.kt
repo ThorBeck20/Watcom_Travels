@@ -72,6 +72,7 @@ class MainActivity : ComponentActivity() {
             val recents = dbRecent(this)
 
             LaunchedEffect(Unit) {
+
                 withContext(Dispatchers.IO) {
                     val fetchedStops = WTAApi.getStopObjets()
                     withContext(Dispatchers.Main){

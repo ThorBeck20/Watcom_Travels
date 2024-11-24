@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
+// All database functions/classes still in testing/debugging mode
 
 // Class to store trip stops together
 data class TripSet (
@@ -23,13 +24,13 @@ class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
 
     // Add trip to database
     fun insertTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("INSERT INTO TRIPS VALUES(\"$id1\", \"$id2\")")
+        writableDatabase.execSQL("INSERT INTO TRIPS(first, second) VALUES(\"$id1\", \"$id2\")")
     }
 
     // Delete trip from database
     // NEEDS TO BE TESTED - may not function as expected
     fun deleteTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("DELETE FROM TRIPS WHERE first=\"$id1\" && second=\"$id2\"")
+        writableDatabase.execSQL("DELETE FROM TRIPS WHERE first=\"$id1\" & second=\"$id2\"")
     }
 
     // Delete all trips from database
@@ -134,7 +135,7 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
     // Delete trip/stops from database
     // NEEDS TO BE TESTED - may not function as expected
     fun deleteTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("DELETE FROM RECENTS WHERE first=\"$id1\" && second=\"$id2\"")
+        writableDatabase.execSQL("DELETE FROM RECENTS WHERE first=\"$id1\" & second=\"$id2\"")
     }
 
     // Clears recent trips/stops history
