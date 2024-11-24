@@ -41,7 +41,7 @@ class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
     fun getAllTrips(): List<TripSet> {
         val ret = mutableListOf<TripSet>()
 
-        val cursor = readableDatabase.rawQuery("SELECT * FROM CHUCK", null)
+        val cursor = readableDatabase.rawQuery("SELECT * FROM TRIPS", null)
         while (cursor.moveToNext()) {
             val fir = cursor.getInt(0)
             val sec = cursor.getInt(1)
@@ -146,7 +146,7 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
     fun getAllRecents(): List<TripSet> {
         val ret = mutableListOf<TripSet>()
 
-        val cursor = readableDatabase.rawQuery("SELECT * FROM CHUCK", null)
+        val cursor = readableDatabase.rawQuery("SELECT * FROM RECENTS", null)
         while (cursor.moveToNext()) {
             val fir = cursor.getInt(0)
             val sec = cursor.getInt(1)
