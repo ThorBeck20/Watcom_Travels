@@ -2,6 +2,7 @@ package com.example.watcomtravels
 
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONStringer
 import java.net.URL
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
@@ -30,7 +31,7 @@ class WTAApi {
         // Return a list of StopObjects
         fun getStopObjets(): List<StopObject> {
             val stopList = mutableListOf<StopObject>()
-            val jsonArray = callAPI("https://api.ridewta.com/stops")
+            val jsonArray: JSONArray = callAPI("https://api.ridewta.com/stops")
 
             for (i in (0..(jsonArray.length() - 1))) {
                 val jsonObject: JSONObject = jsonArray.getJSONObject(i)
