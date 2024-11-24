@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
             val favTrips = dbTrips(this)
             val favStops = dbStops(this)
             val recents = dbRecent(this)
+
 
             LaunchedEffect(true) {
                 withContext(Dispatchers.IO) {

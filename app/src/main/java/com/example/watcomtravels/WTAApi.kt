@@ -1,6 +1,8 @@
 package com.example.watcomtravels
 
+import android.util.Log
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.net.URL
 
@@ -13,38 +15,44 @@ data class StopObject (
     val lat : Float,         // The latitude of the stop
     val long : Float,        // The longitude
     val stopNum : Int        // The stop number  <-- helpful for other data calls
-
-//      Maybe make a separate request for these when a user clicks on the details?
-//      This would save power and space
-
-//    val street : String?,     // The street the stop is on
-//    val lighting : String?,   // A string describing the state of lighting of the stop
-//    val shelter : String?,    // String describing the state of the shelter
-//    val bench : String?,      // A string describing if there is a bench at the stop
 )
 
+// Class to store prediction data
+data class Prediction (
+    val hour: String,
+    val min: String,
+    val sec: String,
+    val bus: String
+)
+
+// All functions in WTAApi must be called in an IO thread
 class WTAApi {
     companion object {
-
-
         // Return a list of StopObjects
+        // List contains only errObj in event of WTA API errors
         fun getStopObjets(): List<StopObject> {
             val stopList = mutableListOf<StopObject>()
             val jsonArray = callAPI("https://api.ridewta.com/stops")
 
-            for (i in (0..(jsonArray.length() - 1))) {
-                val jsonObject: JSONObject = jsonArray.getJSONObject(i)
-                val id = jsonObject.getString("id").toInt()
-                val name: String? = jsonObject.getString("name")
-                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
-                val longitude: Float = jsonObject.getString("longitude").toFloat()
-                val sNum: Int = jsonObject.getInt("stopNum")
+            if (jsonArray == null) {
+                val errObj = StopObject(-1, "System error", 48.73.toFloat(),
+                    -122.49.toFloat(), -1)
+                stopList.add(errObj)
+            } else {
+                for (i in (0..<jsonArray.length())) {
+                    val jsonObject: JSONObject = jsonArray.getJSONObject(i)
+                    val id = jsonObject.getString("id").toInt()
+                    val name: String? = jsonObject.getString("name")
+                    val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
+                    val longitude: Float = jsonObject.getString("longitude").toFloat()
+                    val sNum: Int = jsonObject.getInt("stopNum")
 
-                val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
-                    stopNum = sNum)
+                    val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
+                        stopNum = sNum)
 
-                stopList.add(stop)
+                    stopList.add(stop)
 
+                }
             }
 
             return stopList
@@ -54,74 +62,130 @@ class WTAApi {
         // id = StopNum
         fun getStreet(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonObject: JSONObject = jsonArray.getJSONObject(0)
-            var street = jsonObject.getString("street")
-
-            if (street == null) {
-                street = "N/A"
+            if (jsonArray == null) {
+                return "N/A"
+            } else {
+                val jsonObject: JSONObject = jsonArray.getJSONObject(0)
+                val street = jsonObject.getString("street")
+                Log.d("@@@@", street)
+                return street
             }
-
-            return street
         }
 
         // Return the lighting status of the street
         // id = StopNum
         fun getLighting(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonObject: JSONObject = jsonArray.getJSONObject(0)
-            var light = jsonObject.getString("lighting")
-
-            if (light == null) {
-                light = "N/A"
+            if (jsonArray == null) {
+                return "N/A"
+            } else {
+                val jsonObject: JSONObject = jsonArray.getJSONObject(0)
+                val light = jsonObject.getString("lighting")
+                Log.d("@@@@", light)
+                return light
             }
-
-            return light
         }
 
         // Return the shelter status of the street
         // id = StopNum
         fun getShelter(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonObject: JSONObject = jsonArray.getJSONObject(0)
-            var shelter = jsonObject.getString("shelter")
-
-            if (shelter == null) {
-                shelter = "N/A"
+            if (jsonArray == null) {
+                return "N/A"
+            } else {
+                val jsonObject: JSONObject = jsonArray.getJSONObject(0)
+                val shelter = jsonObject.getString("shelter")
+                Log.d("@@@@", shelter)
+                return shelter
             }
-
-            return shelter
         }
 
         // Return the lighting status of the street
         // id = StopNum
         fun getBench(id: Int): String {
             val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonObject: JSONObject = jsonArray.getJSONObject(0)
-            var bench = jsonObject.getString("bench")
-
-            if (bench == null) {
-                bench = "N/A"
+            if (jsonArray == null) {
+                return "N/A"
+            } else {
+                val jsonObject: JSONObject = jsonArray.getJSONObject(0)
+                val bench = jsonObject.getString("bench")
+                Log.d("@@@@", bench)
+                return bench
             }
-
-            return bench
         }
 
         // Returns next three predictions for a stop
         // id = StopNum
-        /* fun getPredictions(id: Int): */
+        fun getPredictions(id: Int): List<Prediction>? {
+            val predictionList = mutableListOf<Prediction>()
 
-        // Returns bulletins for a stop, if there are any
-        // id = StopNum
-        /* fun getBulletins(id: Int): List<String> */
-
-        // Handles getting the JSONArray for api work
-        private fun callAPI(urlString: String): JSONArray {
-            val url = URL(urlString)
+            val url = URL("https://api.ridewta.com/stops/$id/predictions")
             val connection = url.openConnection()
             connection.setRequestProperty("User-Agent", "Mozilla/5.0")
             val content = connection.getInputStream().bufferedReader().readText()
-            val jsonArray = JSONArray(content)
-            return jsonArray
+            val jsonObject = JSONObject(content)
+            val bustime = jsonObject.getJSONObject("bustime-response")
+            val prd = bustime.getJSONArray("prd")
+
+            var i = prd.length()
+            if (i < 1) {
+                return null
+            } else {
+                if (i > 3) {
+                    i = 3
+                }
+
+                var j = 0
+                while (j < i) {
+                    val pred = prd.getJSONObject(j)
+                    val route = pred.getString("rt")
+                    val time = pred.getString("prdtm")
+
+                    val hr = time.substring(9,11)
+                    val mn = time.substring(12,14)
+                    val sc = time.substring(15)
+
+                    val enter = Prediction(hr, mn, sc, route)
+                    predictionList.add(enter)
+                    j++
+                }
+
+                return predictionList
+            }
+        }
+
+        // Returns bulletins for a stop, if there are any
+        // id = StopNum
+        fun getBulletins(id: Int): List<String> {
+            val bulls = mutableListOf<String>()
+            val noBulletins = "No current bulletins for this stop"
+
+            val jsonArray = callAPI("https://api.ridewta.com/stops/$id/bulletins")
+            if (jsonArray == null) {
+                bulls.add(noBulletins)
+            } else {
+                // work here when a bulletin populates and I can see the standard formatting
+                bulls.add("placeholder")
+            }
+
+            return bulls
+        }
+
+        // Handles getting the JSONArray for api work
+        private fun callAPI(urlString: String): JSONArray? {
+            val errMsg = "No JSONArray, String instead - WTA API error likely"
+
+            try {
+                val url = URL(urlString)
+                val connection = url.openConnection()
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+                val content = connection.getInputStream().bufferedReader().readText()
+                val jsonArray = JSONArray(content)
+                return jsonArray
+            } catch(e: JSONException) {
+                Log.d("ERROR", errMsg)
+                return null
+            }
         }
 
     }
