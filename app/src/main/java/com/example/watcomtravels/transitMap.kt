@@ -1,5 +1,6 @@
 package com.example.watcomtravels
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -18,7 +19,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @Composable
 fun CoolMap(
     startingLocation: LatLng,
-    stopList : MutableList<StopObject>,
+    stopList : MutableList<StopObject>
 ) {
     var isLoaded by remember { mutableStateOf(false) }
 
