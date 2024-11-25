@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val mapComposable = @Composable { CoolMap(bham, stops) }
+            val mapComposable = @Composable { CoolMap(bham, stops, resources) }
 
             Column(
                 modifier = Modifier.fillMaxSize()
@@ -68,6 +68,11 @@ class MainActivity : ComponentActivity() {
                 MainActivity_BottomSheet(mapComposable)
             }
         }
+    }
+
+
+    fun denDix(dp : Int) : Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 }
 
@@ -125,29 +130,5 @@ fun MainActivity_BottomSheet(scaffoldContent : @Composable () -> Unit){
             scaffoldContent.invoke()
         }
     }
-}
 
-
-
-@Composable
-fun CoolMap(startingLocation: LatLng, stopList : MutableList<StopObject>) {
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(startingLocation, 15f)
-    }
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState
-    ) {
-        var numstops = 0
-        stopList.forEach { stop ->
-            val pos = LatLng(stop.lat.toDouble(), stop.long.toDouble())
-            Marker(
-                state = rememberMarkerState(position = pos),
-                title = stop.name
-            )
-            numstops+=1
-
-        }
-        Log.d("@@@", "stops: $numstops")
-    }
 }

@@ -1,5 +1,9 @@
 package com.example.watcomtravels
 
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -16,11 +20,14 @@ import com.google.maps.android.compose.rememberMarkerState
 @Composable
 @GoogleMapComposable
 fun StopMarkersMapContent (
-    stopList: MutableList<StopObject>
+    stopList: MutableList<StopObject>,
+    resource: Resources
 ) {
 
+    var iconBitmap = reScaleResource(resource = resource, R.drawable.busmarker, 8)
+
     // This image is way too big
-    val icon = BitmapDescriptorFactory.fromResource(R.drawable.file)
+    val icon = BitmapDescriptorFactory.fromBitmap(iconBitmap)
 
     stopList.forEach { stop ->
         val pos = LatLng(stop.lat.toDouble(), stop.long.toDouble())
@@ -36,4 +43,21 @@ fun StopMarkersMapContent (
             icon = icon
         )
     }
+}
+
+fun reScaleResource(resource : Resources, id : Int, scalar : Int = 1) : Bitmap {
+    var bitmap : Bitmap
+    var bitmapOptions = BitmapFactory.Options()
+    bitmapOptions.inJustDecodeBounds = true
+
+    BitmapFactory.decodeResource(resource, id, bitmapOptions)
+
+    if (bitmapOptions.outHeight >= 50) {
+        Log.d("@@@", "Outheight = ${bitmapOptions.outHeight}")
+    }
+
+    var bitmapOptions_resized = BitmapFactory.Options()
+    bitmapOptions_resized.inSampleSize = scalar
+    bitmap = BitmapFactory.decodeResource(resource, id, bitmapOptions_resized)
+    return bitmap
 }
