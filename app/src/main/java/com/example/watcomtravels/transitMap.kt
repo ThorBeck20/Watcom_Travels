@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,12 +51,14 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.ktx.model.markerOptions
 import com.google.maps.android.ktx.model.polylineOptions
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TransitUiState(
     val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
@@ -65,7 +68,8 @@ data class TransitUiState(
     val routes : MutableList<Route> = mutableListOf<Route>(),
     val displayedRoute : Route? = null,
     val moveCamera : Boolean = false,
-    val latLongBounds : LatLngBounds? = null
+    val latLongBounds : LatLngBounds? = null,
+    val isLoaded : Boolean = false
 )
 
 class TransitViewModel : ViewModel() {
@@ -161,12 +165,15 @@ class TransitViewModel : ViewModel() {
      * @param latLng [LatLng]
      */
     fun addMarker(latLng: LatLng) {
+        val res = Resources.getSystem()
+        var iconBitmap = reScaleResource(resource = res, R.drawable.busmarker, 8)
+        val markerIcon = BitmapDescriptorFactory.fromBitmap(iconBitmap)
         val marker = MarkerState(latLng)
         val mOptions = markerOptions { MarkerOptions()
             .position(latLng)
             .title("Marker!")
             .anchor(0.5f, 0.5f)
-            .icon(getIcon())
+            .icon(markerIcon)
             .flat(true)
         }
         _uiState.update { it.copy(markers = it.markers.plus(mutableMapOf(marker to mOptions)).toMutableMap()) }
@@ -208,6 +215,13 @@ class TransitViewModel : ViewModel() {
             )
         }
     }
+
+    /**
+     * Updates the [TransitUiState.isLoaded] to true
+     */
+    fun loaded() {
+        _uiState.update { it.copy(isLoaded = true) }
+    }
 }
 
 @Composable
@@ -218,16 +232,19 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel()) {
 
 
     LaunchedEffect(true) {
-        viewModel.getRoutes()
-        var route = Route(
-            routeNum = 1,
-            name = "Fairhaven&Downtown",
-            color = "#ff0000",
-            pattern = null
-        )
-        viewModel.displayRoute(route)
-        // TODO()
-        // viewModel.getStops()
+        withContext(Dispatchers.IO) {
+            viewModel.getRoutes()
+            var route = Route(
+                routeNum = 1,
+                name = "Fairhaven&Downtown",
+                color = "#ff0000",
+                pattern = null
+            )
+            viewModel.displayRoute(route)
+            // TODO()
+            // viewModel.getStops()
+            viewModel.loaded()
+        }
     }
 
     val cameraPositionState : CameraPositionState = rememberCameraPositionState {
@@ -259,60 +276,64 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel()) {
         )
     }
 
-    GoogleMap(
-        properties = mapProperties,
-        uiSettings = mapUiSettings,
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-//        onMapLoaded = { isLoaded = true },
-        googleMapOptionsFactory = {
-            GoogleMapOptions().mapId("map1")
-        },
-        onMapClick = { latLng ->
-            viewModel.addMarker(latLng)
-        }
-    ) {
-        // Render Markers
-        uiState.markers.forEach { (markerState, mOptions) ->
-            Marker(
-                state = markerState,
-                title = mOptions.title,
-                icon = mOptions.icon,
-                anchor = Offset(mOptions.anchorU, mOptions.anchorV),
-                flat = true,
-                onClick = {
-                    viewModel.selectMarker(markerState)
-                    true
-                },
-                onInfoWindowClose = {
-                    viewModel.deselectMarker()
-                }
-            )
-        }
+    if (uiState.isLoaded) {
+        GoogleMap(
+            properties = mapProperties,
+            uiSettings = mapUiSettings,
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            onMapLoaded = { viewModel.loaded() },
+            googleMapOptionsFactory = {
+                GoogleMapOptions().mapId("map1")
+            },
+            onMapClick = { latLng ->
+                viewModel.addMarker(latLng)
+            }
+        ) {
+            // Render Markers
+            uiState.markers.forEach { (markerState, mOptions) ->
+                Marker(
+                    state = markerState,
+                    title = mOptions.title,
+                    icon = mOptions.icon,
+                    anchor = Offset(mOptions.anchorU, mOptions.anchorV),
+                    flat = true,
+                    onClick = {
+                        viewModel.selectMarker(markerState)
+                        true
+                    },
+                    onInfoWindowClose = {
+                        viewModel.deselectMarker()
+                    }
+                )
+            }
 
-        // Render Selected Marker
-        uiState.selectedMarker?.let { selected ->
-            val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
-            viewModel.updateCameraPosition(camPos)
-            Box (
-                modifier = Modifier,
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Text(text = "Hi")
+            // Render Selected Marker
+            uiState.selectedMarker?.let { selected ->
+                val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
+                viewModel.updateCameraPosition(camPos)
+                Box(
+                    modifier = Modifier,
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    Text(text = "Hi")
+                }
+            }
+
+            uiState.polylineOptions?.let { polylineOptions ->
+                Polyline(
+                    points = polylineOptions.points,
+                    color = Color.hsl(
+                        hue = polylineOptions.color.toFloat(),
+                        saturation = 1f,
+                        lightness = 0.5f,
+                    )
+                )
+
             }
         }
-
-        uiState.polylineOptions?.let { polylineOptions ->
-            Polyline(
-                points = polylineOptions.points,
-                color = Color.hsl(
-                    hue = polylineOptions.color.toFloat(),
-                    saturation = 1f,
-                    lightness = 0.5f,
-                )
-            )
-
-        }
+    } else {
+        CircularProgressIndicator()
     }
 
 
