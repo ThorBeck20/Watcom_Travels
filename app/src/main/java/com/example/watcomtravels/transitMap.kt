@@ -1,5 +1,6 @@
 package com.example.watcomtravels
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 fun CoolMap(
     startingLocation: LatLng,
     stopList : MutableList<StopObject>,
+    rsc: Resources
 ) {
     var isLoaded by remember { mutableStateOf(false) }
 
@@ -35,7 +37,7 @@ fun CoolMap(
         }
     ) {
         StopMarkersMapContent(
-            stopList
+            stopList, rsc
         )
 //        var pointList = remember { mutableListOf<LatLng>() }
 //        var point1 = LatLng(stopList[0].lat.toDouble(), stopList[0].long.toDouble())
