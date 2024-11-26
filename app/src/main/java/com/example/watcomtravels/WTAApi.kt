@@ -4,6 +4,7 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.FileNotFoundException
 import java.net.URL
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
@@ -173,7 +174,8 @@ class WTAApi {
 
         // Handles getting the JSONArray for api work
         private fun callAPI(urlString: String): JSONArray? {
-            val errMsg = "No JSONArray, String instead - WTA API error likely"
+            val errWTA = "No JSONArray, String instead - WTA API error likely"
+            val errMsg = "FileNotFoundException - Attempt refresh"
 
             try {
                 val url = URL(urlString)
@@ -183,6 +185,9 @@ class WTAApi {
                 val jsonArray = JSONArray(content)
                 return jsonArray
             } catch(e: JSONException) {
+                Log.d("ERROR", errWTA)
+                return null
+            } catch(e: FileNotFoundException) {
                 Log.d("ERROR", errMsg)
                 return null
             }

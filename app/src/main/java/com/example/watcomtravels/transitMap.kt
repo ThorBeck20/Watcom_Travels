@@ -19,7 +19,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @Composable
 fun CoolMap(
     startingLocation: LatLng,
-    stopList : MutableList<StopObject>
+    stopList : MutableList<StopObject>,
 ) {
     var isLoaded by remember { mutableStateOf(false) }
 
