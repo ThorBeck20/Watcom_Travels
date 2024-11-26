@@ -7,12 +7,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,15 +22,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,12 +59,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import androidx.compose.ui.unit.sp
-import androidx.core.app.ActivityCompat
-import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -216,7 +216,7 @@ private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?)
 private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList<StopObject>, stopType: String) {
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
     ) {
         val scope = rememberCoroutineScope()
         val scaffoldState = rememberBottomSheetScaffoldState()
@@ -322,27 +322,24 @@ fun StopRow(stopList: MutableList<StopObject>, stopType: String) {
 @Composable
 fun StopCard(stop: StopObject) {
 
-
-
     Box(
         modifier = Modifier
             .size(width = 150.dp, height = 100.dp)
-            .border(width = 2.dp, color= Color.Black , shape = RoundedCornerShape(20))
-            .padding(8.dp)
+            .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+            .padding(16.dp)
             .clickable(
                 enabled = true,
                 onClick = {
                     showStopInfo = stop
                     Log.d("@@@", "stop clicked!!")
                 }
-            )
+            ),
+        contentAlignment = Alignment.Center,
+
+
 
     ){
-        Column(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(8.dp)
-        ){
+
             stop.name?.let {
                 Text(
                     it,
@@ -352,55 +349,135 @@ fun StopCard(stop: StopObject) {
                 )
             }
 
-            Text(
-                "stop no. " + stop.stopNum.toString(),
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center
-            )
-        }
+
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LandscapeUI(mapComposable: @Composable () -> Unit, stops: MutableList<StopObject>?) {
 
+    val searchText = rememberSaveable { mutableStateOf("") }
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        if (showStopInfo != null) {
+            StopInfoPage(showStopInfo!!)
+        } else if (showRouteInfo != null) {
+
+        } else {
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Row {
+                                TextField(
+                                    value = searchText.value,
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    onValueChange = {
+                                        searchText.value = it
+                                    },
+                                    placeholder = {
+                                        Text("Where to?")
+                                    },
+                                    shape = RoundedCornerShape(50.dp),
+                                    singleLine = true
+
+                                )
+
+                            }
+                        }
+                    )
+                }
+            ) { innerPadding ->
+
+
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StopInfoPage(stop: StopObject) {
 
-    Scaffold(
+    val scaffoldState = rememberBottomSheetScaffoldState()
+
+
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetPeekHeight = 256.dp,
+        sheetShadowElevation = 24.dp,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
 
                     ){
-
-                        Button(
-                            onClick = {
-                                showStopInfo = null
-                            },
-                            modifier = Modifier
-
-
-                        ) {
-                            Text("Back")
-                        }
                         Text(
-                            "Stop Information",
-                            textAlign = TextAlign.Center
+                            stop.name!!,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
 
 
-                }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            showStopInfo = null
+                        },
+                        content = {
+                          Icon(
+                              Icons.AutoMirrored.Filled.ArrowBack,
+                              "Back",
+                              tint = MaterialTheme.colorScheme.primary
+                          )
+                        }
+                    )
+                },
+                colors = TopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    actionIconContentColor = Color.Transparent
+
+                ),
+
+
             )
+
+        },
+        sheetContent = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                Text(
+                    "Stop Information",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(4.dp)
+                )
+                Text(
+                    stop.name!!,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(4.dp),
+                    fontSize = 24.sp,
+
+                )
+            }
+
         }
     ) { innerPadding ->
 
