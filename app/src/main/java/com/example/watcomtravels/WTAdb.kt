@@ -30,7 +30,6 @@ class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
     }
 
     // Delete trip from database
-    // NEEDS TO BE TESTED - may not function as expected
     fun deleteTrip(id1: Int, id2: Int) {
         writableDatabase.execSQL("DELETE FROM TRIPS WHERE (first=\"$id1\") AND (second=\"$id2\")")
     }
