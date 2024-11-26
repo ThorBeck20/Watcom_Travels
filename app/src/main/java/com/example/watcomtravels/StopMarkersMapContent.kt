@@ -20,16 +20,14 @@ import com.google.maps.android.compose.rememberMarkerState
 @Composable
 @GoogleMapComposable
 fun StopMarkersMapContent (
-    stopList: MutableList<StopObject>,
+    stopList: MutableList<StopObject>?,
     resource: Resources
 ) {
 
-    var iconBitmap = reScaleResource(resource = resource, R.drawable.busmarker, 8)
+    var stopIconBitmap = reScaleResource(resource = resource, R.drawable.busmarker, 8)
+    val stopIcon = BitmapDescriptorFactory.fromBitmap(stopIconBitmap)
 
-    // This image is way too big
-    val icon = BitmapDescriptorFactory.fromBitmap(iconBitmap)
-
-    stopList.forEach { stop ->
+    stopList?.forEach { stop ->
         val pos = LatLng(stop.lat.toDouble(), stop.long.toDouble())
         Marker(
             state = rememberMarkerState(position = pos),
@@ -40,7 +38,7 @@ fun StopMarkersMapContent (
 //                false
 //            },
             anchor = Offset(0.5f, 0.5f),
-            icon = icon
+            icon = stopIcon
         )
     }
 }
