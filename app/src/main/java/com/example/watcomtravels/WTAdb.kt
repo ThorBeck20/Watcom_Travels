@@ -4,7 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-// All database functions/classes still in testing/debugging mode
+// All databases tested and functional as of testing
 
 // Class to store trip stops together
 data class TripSet (
@@ -13,7 +13,7 @@ data class TripSet (
 )
 
 // Database of favourite/saved routes - no size limit
-class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
+class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyTripsDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE IF NOT EXISTS TRIPS(first INT, second INT)")
     }
@@ -30,7 +30,7 @@ class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
     // Delete trip from database
     // NEEDS TO BE TESTED - may not function as expected
     fun deleteTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("DELETE FROM TRIPS WHERE first=\"$id1\" & second=\"$id2\"")
+        writableDatabase.execSQL("DELETE FROM TRIPS WHERE (first=\"$id1\") AND (second=\"$id2\")")
     }
 
     // Delete all trips from database
@@ -56,7 +56,7 @@ class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
 }
 
 // Database of favourite/saved stops - no size limit
-class dbStops(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
+class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE IF NOT EXISTS STOPS(stop INT)")
     }
@@ -67,13 +67,12 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
 
     // Add stop to database
     fun insertStop(id: Int) {
-        writableDatabase.execSQL("INSERT INTO STOPS VALUES(\"$id\")")
+        writableDatabase.execSQL("INSERT INTO STOPS(stop) VALUES(\"$id\")")
     }
 
     // Delete stop from database
-    // NEEDS TO BE TESTED - may not function as expected
     fun deleteStop(id1: Int) {
-        writableDatabase.execSQL("DELETE FROM STOPS WHERE first=\"$id1\"")
+        writableDatabase.execSQL("DELETE FROM STOPS WHERE stop=\"$id1\"")
     }
 
     // Delete all stops from database
@@ -99,9 +98,7 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
 // Database of recent stops/trips - max five
 // If saving a stop, second id set to -1
 // Note: most recent entry will be bottom of the database
-class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
-    private var tracker = 0
-
+class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE IF NOT EXISTS RECENTS(first INT, second INT)")
     }
@@ -111,31 +108,31 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyDb", null, 1) {
     }
 
     // Add trip/stop to database
-    // also needs to be tested
     fun insertRecent(id1: Int, id2: Int) {
-        writableDatabase.execSQL("INSERT INTO RECENTS VALUES(\"$id1\", \"$id2\")")
-        tracker++
+        writableDatabase.execSQL("INSERT INTO RECENTS(first, second) VALUES(\"$id1\", \"$id2\")")
+        val cursor = readableDatabase.rawQuery("SELECT COUNT(*) FROM RECENTS", null)
+        cursor.moveToFirst()
+        val tracker = cursor.getInt(0)
 
         // Updates database to most recent 5 trips/stops
-        if (tracker == 5) {
+        if (tracker == 6) {
             val hold = getAllRecents()
             clearRecents()
 
             var i = 1
-            while (i < 6) {
+            while (i < tracker) {
                 val trn = hold[i]
                 insertRecent(trn.first, trn.second)
                 i++
             }
-
-            tracker = 0
         }
+
+        cursor.close()
     }
 
     // Delete trip/stops from database
-    // NEEDS TO BE TESTED - may not function as expected
-    fun deleteTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("DELETE FROM RECENTS WHERE first=\"$id1\" & second=\"$id2\"")
+    fun deleteRecent(id1: Int, id2: Int) {
+        writableDatabase.execSQL("DELETE FROM RECENTS WHERE (first=\"$id1\") AND (second=\"$id2\")")
     }
 
     // Clears recent trips/stops history
