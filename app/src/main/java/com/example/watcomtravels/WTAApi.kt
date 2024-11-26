@@ -8,7 +8,6 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.json.JSONStringer
 import java.io.FileNotFoundException
-import java.io.FileNotFoundException
 import java.net.URL
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...

@@ -1,5 +1,12 @@
 package com.example.watcomtravels
 
+import android.content.Context
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Picture
+import android.graphics.drawable.Drawable
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,6 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.CameraPosition
@@ -34,7 +44,7 @@ import kotlinx.coroutines.withContext
 
 
 @Composable
-fun TransitMap(viewModel: TransitViewModel = TransitViewModel()) {
+fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.current)) {
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
 
@@ -159,6 +169,24 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel()) {
 
 }
 
+fun resourceToScaledBitMap(path: java.nio.file.Path, size : Int = 10) : Bitmap? {
+    val drawable : Drawable = Drawable.createFromPath(path.toString()) ?: return null
+    var bitmap : Bitmap = Bitmap.createBitmap(
+        drawable.intrinsicWidth,
+        drawable.intrinsicHeight,
+        Bitmap.Config.ARGB_8888
+    )
+    val resizedBitmap = Bitmap.createScaledBitmap(
+        bitmap,
+        size,
+        size,
+        true
+    )
+//    val canvas = Canvas(bitmap)
+//    drawable.setBounds(0,0, canvas.width, canvas.height)
+//    drawable.draw(canvas)
+    return resizedBitmap
+}
 
 /*
 class TransitMap() {

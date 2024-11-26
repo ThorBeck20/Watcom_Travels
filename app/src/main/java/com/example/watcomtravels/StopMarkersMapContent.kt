@@ -1,16 +1,22 @@
 package com.example.watcomtravels
 
+import android.content.Context
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.util.Log
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
+import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMapComposable
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberMarkerState
+import java.nio.file.Path
+import kotlin.coroutines.coroutineContext
 
 /**
  * This is a google maps composable, which creates Icons from a list of stopObjects
@@ -24,8 +30,9 @@ fun StopMarkersMapContent (
     resource: Resources
 ) {
 
-    var stopIconBitmap = reScaleResource(resource = resource, R.drawable.busmarker, 8)
-    val stopIcon = BitmapDescriptorFactory.fromBitmap(stopIconBitmap)
+    val path : Path = Path.of("res/drawable")
+    var stopIconBitmap = resourceToScaledBitMap(path, 8)
+    val stopIcon = stopIconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
 
     stopList?.forEach { stop ->
         val pos = LatLng(stop.lat.toDouble(), stop.long.toDouble())
@@ -43,19 +50,4 @@ fun StopMarkersMapContent (
     }
 }
 
-fun reScaleResource(resource : Resources, id : Int, scalar : Int = 1) : Bitmap {
-    var bitmap : Bitmap
-    var bitmapOptions = BitmapFactory.Options()
-    bitmapOptions.inJustDecodeBounds = true
 
-    BitmapFactory.decodeResource(resource, id, bitmapOptions)
-
-    if (bitmapOptions.outHeight >= 50) {
-        Log.d("@@@", "Outheight = ${bitmapOptions.outHeight}")
-    }
-
-    var bitmapOptions_resized = BitmapFactory.Options()
-    bitmapOptions_resized.inSampleSize = scalar
-    bitmap = BitmapFactory.decodeResource(resource, id, bitmapOptions_resized)
-    return bitmap
-}

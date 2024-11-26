@@ -1,9 +1,12 @@
 package com.example.watcomtravels
 
+import android.content.Context
 import android.content.res.Resources
 import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -20,8 +23,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.nio.file.Path
 
 data class TransitUiState(
+    val context : Context? = null,
     val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
     val markers : MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
     val selectedMarker : MarkerState? = null,
@@ -33,8 +38,8 @@ data class TransitUiState(
     val isLoaded : Boolean = false
 )
 
-class TransitViewModel : ViewModel() {
-    private val _uiState = MutableStateFlow(TransitUiState())
+class TransitViewModel(context: Context) : ViewModel() {
+    private val _uiState = MutableStateFlow(TransitUiState(context))
     val uiState : StateFlow<TransitUiState> get() = _uiState
 
 
@@ -126,9 +131,9 @@ class TransitViewModel : ViewModel() {
      * @param latLng [LatLng]
      */
     fun addMarker(latLng: LatLng) {
-        val res = Resources.getSystem()
-        var iconBitmap = reScaleResource(resource = res, R.drawable.busmarker, 8)
-        val markerIcon = BitmapDescriptorFactory.fromBitmap(iconBitmap)
+        val path : Path = Path.of("res/drawable/busicon.jpg")
+        val iconBitmap = resourceToScaledBitMap(path,8)
+        val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
         val marker = MarkerState(latLng)
         val mOptions = markerOptions { MarkerOptions()
             .position(latLng)

@@ -42,6 +42,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     val fetchedStops = WTAApi.getStopObjets()
                     withContext(Dispatchers.Main){
-                        stops.addAll(fetchedStops)
+                        fetchedStops?.let { stops.addAll(it) }
                         loaded = true
                         Log.d("@@@", "STOPS LOADED")
                     }
@@ -96,7 +97,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val mapComposable = @Composable { CoolMap(bham, stops, resources) }
+            val transitViewModel = TransitViewModel(context = this@MainActivity)
+            val uiState by transitViewModel.uiState.collectAsState()
+
+            val mapComposable = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
 
             LaunchedEffect(true) {
@@ -393,7 +397,11 @@ private fun LandscapeUI(mapComposable: @Composable () -> Unit, stops: MutableLis
                     )
                 }
             ) { innerPadding ->
+                Box(
+                    modifier = Modifier.padding(innerPadding)
+                ) {
 
+                }
 
             }
         }
