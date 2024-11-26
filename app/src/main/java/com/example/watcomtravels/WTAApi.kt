@@ -4,6 +4,8 @@ import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import org.json.JSONStringer
+import java.io.FileNotFoundException
 import java.net.URL
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
@@ -25,6 +27,12 @@ data class Prediction (
     val bus: String
 )
 
+data class Route (
+    val routeNum: String,
+    val routeName: String,
+    val routeColor: String
+)
+
 // All functions in WTAApi must be called in an IO thread
 class WTAApi {
     companion object {
@@ -32,7 +40,7 @@ class WTAApi {
         // List contains only errObj in event of WTA API errors
         fun getStopObjets(): List<StopObject> {
             val stopList = mutableListOf<StopObject>()
-            val jsonArray = callAPI("https://api.ridewta.com/stops")
+            val jsonArray: JSONArray? = callAPI("https://api.ridewta.com/stops")
 
             if (jsonArray == null) {
                 val errObj = StopObject(-1, "System error", 48.73.toFloat(),
@@ -56,6 +64,30 @@ class WTAApi {
             }
 
             return stopList
+        }
+
+        fun getRoutes(): List<Route> {
+            val routeList = mutableListOf<Route>()
+            val jsonArray: JSONArray? = callAPI("https://api.ridewta.com/routes")
+
+            if (jsonArray == null) {
+                val errObj = Route( "System error", "System Error", "#FFFFFF")
+                routeList.add(errObj)
+            } else {
+                for (i in (0..<jsonArray.length())) {
+                    val jsonObject: JSONObject = jsonArray.getJSONObject(i)
+                    val routeNum = jsonObject.getString("routeNum")
+                    val routeName = jsonObject.getString("routeName")
+                    val routeColor = jsonObject.getString("routeColor")
+
+                    val route = Route(routeNum,routeName, routeColor)
+
+                    routeList.add(route)
+
+                }
+            }
+
+            return routeList
         }
 
         // Return the street the stop is on
@@ -173,7 +205,8 @@ class WTAApi {
 
         // Handles getting the JSONArray for api work
         private fun callAPI(urlString: String): JSONArray? {
-            val errMsg = "No JSONArray, String instead - WTA API error likely"
+            val errWTA = "No JSONArray, String instead - WTA API error likely"
+            val errMsg = "FileNotFoundException - Attempt refresh"
 
             try {
                 val url = URL(urlString)
@@ -183,6 +216,9 @@ class WTAApi {
                 val jsonArray = JSONArray(content)
                 return jsonArray
             } catch(e: JSONException) {
+                Log.d("ERROR", errWTA)
+                return null
+            } catch(e: FileNotFoundException) {
                 Log.d("ERROR", errMsg)
                 return null
             }
