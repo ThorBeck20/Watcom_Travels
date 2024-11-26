@@ -35,6 +35,7 @@ import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
@@ -51,6 +52,7 @@ import com.google.maps.android.ktx.model.polylineOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -61,7 +63,9 @@ data class TransitUiState(
     val selectedMarker : MarkerState? = null,
     val polylineOptions: PolylineOptions? = null,
     val routes : MutableList<Route> = mutableListOf<Route>(),
-    val routePatterns : MutableStateFlow<RoutePattern> = MutableStateFlow<mutableListOf<RoutePattern>()>()
+    val displayedRoute : Route? = null,
+    val moveCamera : Boolean = false,
+    val latLongBounds : LatLngBounds? = null
 )
 
 class TransitViewModel : ViewModel() {
@@ -86,24 +90,50 @@ class TransitViewModel : ViewModel() {
 
 
     /**
-     * Updates the viewModel by passing the [routeNum] to the [WTAApi].
-     * @param routeNum Int
+     * Updates the viewModel's [TransitUiState.displayRoute] by passing the [route] to the [WTAApi].
+     * @param route [Route]
      */
-    fun displayRoute(routeNum : Int) {
+    fun displayRoute(route : Route) {
         viewModelScope.launch {
             try {
-                val rtPatterns : MutableList<RoutePattern> = WTAApi.getRoutePatterns(routeNum)?.toMutableList() ?: mutableListOf<RoutePattern>()
-                _uiState.update { it.copy(routePatterns = rtPatterns) }
+                val rtPatterns : MutableList<RoutePattern> = WTAApi.getRoutePatterns(route.routeNum)?.toMutableList() ?: mutableListOf<RoutePattern>()
+                val r = Route(
+                    routeNum = route.routeNum,
+                    name = route.name,
+                    color = route.color,
+                    pattern = rtPatterns
+                )
+                _uiState.update { it.copy(displayedRoute = r) }
+                Log.d("@@@", "displayedRoute")
+                updatePolyLine(r)
+                zoomRoute()
             } catch (e : Exception) {
                 Log.d("@@@","There was an issue $e")
             }
         }
+
+    }
+
+    /**
+     * Creates a bounds builder to include the points from the [TransitUiState.polylineOptions] and
+     * creates a [LatLngBounds.builder] that will trigger a zoom. This zoom must be done with a
+     * [CameraPositionState], so [TransitUiState.moveCamera] is set to true.
+     */
+    private fun zoomRoute() {
+        val points : List<LatLng> = uiState.value.polylineOptions?.points as List<LatLng>
+        val boundsBuilder = LatLngBounds.builder()
+        for (point in points) {
+            boundsBuilder.include(point)
+        }
+        val bounds = boundsBuilder.build()
+        _uiState.update { it.copy(latLongBounds = bounds) }
+        _uiState.update { it.copy(moveCamera = true) }
     }
 
 
     /**
      * Updates the viewModel's [TransitUiState.cameraPosition] using [position]
-     * @param position CameraPosition
+     * @param position [CameraPosition]
      */
     fun updateCameraPosition(position: CameraPosition) {
         _uiState.update { it.copy(cameraPosition = position) }
@@ -111,7 +141,7 @@ class TransitViewModel : ViewModel() {
 
     /**
      * Updates the viewModel's [TransitUiState.markers] from [stop]
-     * @param stop StopObject
+     * @param stop [StopObject]
      */
     fun addMarker(stop : StopObject) {
         val marker = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
@@ -128,7 +158,7 @@ class TransitViewModel : ViewModel() {
 
     /**
      * Updates the viewModel's [TransitUiState.markers] from [latLng]
-     * @param latLng LatLng
+     * @param latLng [LatLng]
      */
     fun addMarker(latLng: LatLng) {
         val marker = MarkerState(latLng)
@@ -144,7 +174,7 @@ class TransitViewModel : ViewModel() {
 
     /**
      * Updates the viewModel's [TransitUiState.selectedMarker] with [marker].
-     * @param marker MarkerState
+     * @param marker [MarkerState]
      */
     fun selectMarker(marker: MarkerState) {
         _uiState.update { it.copy(selectedMarker = marker) }
@@ -158,22 +188,21 @@ class TransitViewModel : ViewModel() {
     }
 
     /**
-     * Updates the viewModel's [TransitUiState.polylineOptions] by collecting [LatLng] objects from
-     * [r] and it's subsequent lists
-     * @param r Route
+     * Updates the viewModel's [TransitUiState.polylineOptions] from changes in [r]\
+     * @param r [Route]
      */
-    fun createPolyLine(r : Route) {
+    private fun updatePolyLine(r : Route) {
         val points : MutableList<LatLng> = mutableListOf<LatLng>()
         r.pattern?.forEach { routePattern ->
             routePattern.pt.forEach { patternObj ->
                 points.add(LatLng(patternObj.lat.toDouble(), patternObj.long.toDouble()))
             }
         }
-        _uiState.update {
+        _uiState.update { it ->
             it.copy(polylineOptions =
                 polylineOptions { PolylineOptions()
                     .addAll(points)
-                    .color(Color(android.graphics.Color.parseColor(r.color)).toArgb())
+                    .color(Color(android.graphics.Color.parseColor((it.displayedRoute?.color ?: Color.Black).toString())).toArgb())
                     .clickable(true)
                 }
             )
@@ -182,25 +211,37 @@ class TransitViewModel : ViewModel() {
 }
 
 @Composable
-fun transitMap(viewModel: TransitViewModel = TransitViewModel()) {
+fun TransitMap(viewModel: TransitViewModel = TransitViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
 
+
+
     LaunchedEffect(true) {
         viewModel.getRoutes()
-        var route : Route = Route(
+        var route = Route(
             routeNum = 1,
             name = "Fairhaven&Downtown",
             color = "#ff0000",
             pattern = null
         )
-        viewModel.displayRoute(route.routeNum)
+        viewModel.displayRoute(route)
         // TODO()
         // viewModel.getStops()
     }
 
     val cameraPositionState : CameraPositionState = rememberCameraPositionState {
         position = uiState.cameraPosition
+    }
+
+    if (uiState.moveCamera) {
+            uiState.latLongBounds?.let {
+                CameraUpdateFactory.newLatLngBounds(it, 100)
+            }?.let {
+                cameraPositionState.move(
+                    update = it
+                )
+            }
     }
 
     var mapProperties by remember {
