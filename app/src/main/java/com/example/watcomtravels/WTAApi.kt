@@ -1,5 +1,7 @@
 package com.example.watcomtravels
 
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
@@ -33,7 +35,7 @@ data class Route (
     val routeNum: Int,
     val name : String,
     val color : String,
-    val pattern : MutableList<RoutePattern>?
+    var pattern : MutableList<RoutePattern>?
 )
 
 // Data class to store the patterns of the route
@@ -279,6 +281,8 @@ class WTAApi {
             return patternObject
         }
 
+
+        // This is un-used for now
         // Gets a specific pattern from a JSON Object that represents the route pattern
         private fun getRoutePattern(jsonObject: JSONObject) : RoutePattern {
             val routePattern : RoutePattern
@@ -316,6 +320,7 @@ class WTAApi {
             if (responseJsonArray == null) {
                 return null
             } else {
+
                 for (i in (0..<responseJsonArray.length())) {
                     val routePattern : RoutePattern
                     val jsonObject: JSONObject = responseJsonArray.getJSONObject(i)
@@ -355,8 +360,8 @@ class WTAApi {
                     val color: String = jsonObject.getString("routeColor")
 
 
-                    val patternList = getRoutePatterns(routeNum)
-                    val route = Route(routeNum = routeNum, name = name, color = color, pattern = patternList)
+                    // val patternList = getRoutePatterns(routeNum)
+                    val route = Route(routeNum = routeNum, name = name, color = color, pattern = null)
 
                     routeList.add(route)
 
@@ -366,11 +371,5 @@ class WTAApi {
             return routeList
 
         }
-
-
-
-
-
     }
-
 }
