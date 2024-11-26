@@ -1,5 +1,6 @@
 package com.example.watcomtravels
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
