@@ -196,8 +196,11 @@ class WTAApi {
             if (jsonArray == null) {
                 bulls.add(noBulletins)
             } else {
-                // work here when a bulletin populates and I can see the standard formatting
-                bulls.add("placeholder")
+                for (b in 0..<jsonArray.length()) {
+                    val jsonObject: JSONObject = jsonArray.getJSONObject(b)
+                    val bulletin = jsonObject.getString("dtl")
+                    bulls.add(bulletin)
+                }
             }
 
             return bulls
