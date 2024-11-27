@@ -19,11 +19,15 @@ import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.ktx.model.markerOptions
 import com.google.maps.android.ktx.model.polylineOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.URI
 import java.nio.file.Path
+import java.nio.file.Paths
 
 data class TransitUiState(
     val context : Context? = null,
@@ -64,7 +68,7 @@ class TransitViewModel(context: Context) : ViewModel() {
      * @param route [Route]
      */
     fun displayRoute(route : Route) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val rtPatterns : MutableList<RoutePattern> = WTAApi.getRoutePatterns(route.routeNum)?.toMutableList() ?: mutableListOf<RoutePattern>()
                 val r = Route(
@@ -73,10 +77,12 @@ class TransitViewModel(context: Context) : ViewModel() {
                     color = route.color,
                     pattern = rtPatterns
                 )
-                _uiState.update { it.copy(displayedRoute = r) }
-                Log.d("@@@", "displayedRoute")
-                updatePolyLine(r)
-                zoomRoute()
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(displayedRoute = r) }
+                    Log.d("@@@", "displayedRoute")
+                    updatePolyLine(r)
+                    zoomRoute()
+                }
             } catch (e : Exception) {
                 Log.d("@@@","There was an issue $e")
             }
@@ -114,6 +120,9 @@ class TransitViewModel(context: Context) : ViewModel() {
      * @param stop [StopObject]
      */
     fun addMarker(stop : StopObject) {
+        val imagePath = System.getProperty("user.dir")?.plus("app/src/main/res/drawable/busicon.jpg") ?: ""
+        val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
+        val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
         val marker = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
         val mOptions = markerOptions { MarkerOptions()
             .position(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
@@ -131,8 +140,9 @@ class TransitViewModel(context: Context) : ViewModel() {
      * @param latLng [LatLng]
      */
     fun addMarker(latLng: LatLng) {
-        val path : Path = Path.of("res/drawable/busicon.jpg")
-        val iconBitmap = resourceToScaledBitMap(path,8)
+        val imagePath = Paths.get("app", "src", "main", "res", "drawable", "busicon.jpg").toAbsolutePath().toString()
+        //.plus("app/src/main/res/drawable/busicon.jpg") ?: ""
+        val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
         val marker = MarkerState(latLng)
         val mOptions = markerOptions { MarkerOptions()
@@ -166,20 +176,18 @@ class TransitViewModel(context: Context) : ViewModel() {
      */
     private fun updatePolyLine(r : Route) {
         val points : MutableList<LatLng> = mutableListOf<LatLng>()
+        val pLOptions = polylineOptions { PolylineOptions()
+            .color(Color(android.graphics.Color.parseColor((r.color))).toArgb())
+            .clickable(false)
+        }
         r.pattern?.forEach { routePattern ->
             routePattern.pt.forEach { patternObj ->
-                points.add(LatLng(patternObj.lat.toDouble(), patternObj.long.toDouble()))
+                val latLng = LatLng(patternObj.lat.toDouble(), patternObj.long.toDouble())
+                points.add(latLng)
+                pLOptions.add(latLng)
             }
         }
-        _uiState.update { it ->
-            it.copy(polylineOptions =
-            polylineOptions { PolylineOptions()
-                .addAll(points)
-                .color(Color(android.graphics.Color.parseColor((it.displayedRoute?.color ?: Color.Black).toString())).toArgb())
-                .clickable(true)
-            }
-            )
-        }
+        _uiState.update { it -> it.copy(polylineOptions = pLOptions) }
     }
 
     /**
