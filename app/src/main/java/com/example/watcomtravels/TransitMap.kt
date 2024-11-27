@@ -134,7 +134,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
                 )
             }
 
-            // Render Selected Marker
+            // Renders Selected Marker
             uiState.selectedMarker?.let { selected ->
                 val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
                 viewModel.updateCameraPosition(camPos)
