@@ -15,6 +15,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMapComposable
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberMarkerState
+import java.net.URI
 import java.nio.file.Path
 import kotlin.coroutines.coroutineContext
 
@@ -29,9 +30,8 @@ fun StopMarkersMapContent (
     stopList: MutableList<StopObject>?,
     resource: Resources
 ) {
-
-    val path : Path = Path.of("res/drawable")
-    var stopIconBitmap = resourceToScaledBitMap(path, 8)
+    val imagePath = System.getProperty("user.dir")?.plus("app/src/main/res/drawable/busicon.jpg") ?: ""
+    var stopIconBitmap = resourceToScaledBitMap(R.drawable.busmarker, 8)
     val stopIcon = stopIconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
 
     stopList?.forEach { stop ->

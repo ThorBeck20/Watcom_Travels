@@ -319,7 +319,7 @@ class WTAApi {
             if (responseJsonArray == null) {
                 return null
             } else {
-
+                Log.d("@@API@@", "Received response")
                 for (i in (0..<responseJsonArray.length())) {
                     val routePattern : RoutePattern
                     val jsonObject: JSONObject = responseJsonArray.getJSONObject(i)
@@ -338,6 +338,7 @@ class WTAApi {
                         pt = patternList
                     )
                     routePatternList!!.add(routePattern)
+                    Log.d("@@API@@", "Finished a pattern")
                 }
             }
             Log.d("@@@", "Routes Loaded!")

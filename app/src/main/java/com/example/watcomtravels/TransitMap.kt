@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Picture
-import android.graphics.drawable.Drawable
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,7 +16,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
@@ -42,13 +40,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
-
 @Composable
 fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.current)) {
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
-
-
 
     LaunchedEffect(true) {
         withContext(Dispatchers.IO) {
@@ -59,10 +54,12 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
                 color = "#ff0000",
                 pattern = null
             )
-            viewModel.displayRoute(route)
-            // TODO()
-            // viewModel.getStops()
-            viewModel.loaded()
+            withContext(Dispatchers.Main) {
+                viewModel.displayRoute(route)
+                // TODO()
+                // viewModel.getStops()
+                viewModel.loaded()
+            }
         }
     }
 
@@ -80,7 +77,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
             }
     }
 
-    var mapProperties by remember {
+    val mapProperties by remember {
         mutableStateOf(
             MapProperties(
                 isTrafficEnabled = true,
@@ -88,9 +85,14 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
         )
     }
     val mapUiSettings by remember {
+        // NO WEIRD GESTURES >:)
         mutableStateOf(
             MapUiSettings(
-                mapToolbarEnabled = false
+                mapToolbarEnabled = false,
+                rotationGesturesEnabled = true,
+                scrollGesturesEnabled= true,
+                scrollGesturesEnabledDuringRotateOrZoom = false,
+                tiltGesturesEnabled = false,
             )
         )
     }
@@ -142,11 +144,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
             uiState.polylineOptions?.let { polylineOptions ->
                 Polyline(
                     points = polylineOptions.points,
-                    color = Color.hsl(
-                        hue = polylineOptions.color.toFloat(),
-                        saturation = 1f,
-                        lightness = 0.5f,
-                    )
+                    color = Color.Black
                 )
 
             }
@@ -169,13 +167,13 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
 
 }
 
-fun resourceToScaledBitMap(path: java.nio.file.Path, size : Int = 10) : Bitmap? {
-    val drawable : Drawable = Drawable.createFromPath(path.toString()) ?: return null
-    var bitmap : Bitmap = Bitmap.createBitmap(
-        drawable.intrinsicWidth,
-        drawable.intrinsicHeight,
-        Bitmap.Config.ARGB_8888
-    )
+fun resourceToScaledBitMap(@DrawableRes id: Int, size : Int = 10) : Bitmap? {
+//    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    val bitmap : Bitmap? = BitmapFactory.decodeResource(Resources.getSystem(), id)
+    if (bitmap == null) {
+        return null
+    }
+//    options.inSampleSize = calculateInSampleSize()
     val resizedBitmap = Bitmap.createScaledBitmap(
         bitmap,
         size,
