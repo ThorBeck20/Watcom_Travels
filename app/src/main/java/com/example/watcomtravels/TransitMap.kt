@@ -56,8 +56,10 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
             )
             withContext(Dispatchers.Main) {
                 viewModel.displayRoute(route)
-                // TODO()
-                // viewModel.getStops()
+                /**
+                 * TODO() - Get all the routes and put them and their patterns in the database
+                 *          Then do the same for the stops.
+                  */
                 viewModel.loaded()
             }
         }
