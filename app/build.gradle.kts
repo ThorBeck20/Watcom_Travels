@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
 }
 
 android {
@@ -50,6 +51,8 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.ui.text.google.fonts)
+    implementation(libs.play.services.maps)
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,4 +63,22 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.maps.android:maps-compose:6.2.1")
+
+
+    // Required -- JUnit 4 framework
+    testImplementation(libs.junit.junit)
+    // Optional -- Robolectric environment
+    testImplementation(libs.androidx.core)
+    // Optional -- Mockito framework
+    testImplementation(libs.mockito.core)
+    // Optional -- mockito-kotlin
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.kotlin.mockito.kotlin)
+    testImplementation(libs.mockito.mockito.core)
+    // Optional -- mockito-kotlin
+    testImplementation(libs.mockito.mockito.kotlin)
+    // Optional -- Mockk framework
+    testImplementation("io.mockk:mockk")
+
+
 }

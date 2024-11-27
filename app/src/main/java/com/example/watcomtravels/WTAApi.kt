@@ -1,5 +1,7 @@
 package com.example.watcomtravels
 
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONException
@@ -13,7 +15,7 @@ const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
 // Class to store the stops
 data class StopObject (
     val id : Int,            // The id of the stop
-    val name : String?,       // The name of the stop
+    val name : String?,      // The name of the stop
     val lat : Float,         // The latitude of the stop
     val long : Float,        // The longitude
     val stopNum : Int        // The stop number  <-- helpful for other data calls
@@ -27,10 +29,30 @@ data class Prediction (
     val bus: String
 )
 
+// Data class to store routes
 data class Route (
-    val routeNum: String,
-    val routeName: String,
-    val routeColor: String
+    val routeNum: Int,
+    val name : String,
+    val color : String,
+    var pattern : MutableList<RoutePattern>?
+)
+
+// Data class to store the patterns of the route
+data class RoutePattern (
+    val pid : Int,
+    val lineNum : Int,
+    val routeDir : String,
+    val pt : MutableList<PatternObject>
+)
+
+// Data Class for the pattern objects
+data class PatternObject (
+    val seq : Int,          // Stop number in sequence
+    val lat : Float,
+    val long : Float,
+    val type : String,      // Seems to be either "S" for stop or "W" for ...
+    val pdist : Int,        // Not really sure what the units are for this ...
+    val stop : StopObject?
 )
 
 // All functions in WTAApi must be called in an IO thread
@@ -38,14 +60,15 @@ class WTAApi {
     companion object {
         // Return a list of StopObjects
         // List contains only errObj in event of WTA API errors
-        fun getStopObjets(): List<StopObject> {
+        fun getStopObjets(): List<StopObject>? {
             val stopList = mutableListOf<StopObject>()
             val jsonArray: JSONArray? = callAPI("https://api.ridewta.com/stops")
 
             if (jsonArray == null) {
-                val errObj = StopObject(-1, "System error", 48.73.toFloat(),
-                    -122.49.toFloat(), -1)
-                stopList.add(errObj)
+                return null
+//                val errObj = StopObject(-1, "System error", 48.73.toFloat(),
+//                    -122.49.toFloat(), -1)
+//                stopList.add(errObj)
             } else {
                 for (i in (0..<jsonArray.length())) {
                     val jsonObject: JSONObject = jsonArray.getJSONObject(i)
@@ -66,28 +89,24 @@ class WTAApi {
             return stopList
         }
 
-        fun getRoutes(): List<Route> {
-            val routeList = mutableListOf<Route>()
-            val jsonArray: JSONArray? = callAPI("https://api.ridewta.com/routes")
-
+        // Gets the stop information through the stop Number
+        fun getStop(stopNum: Int) : StopObject? {
+            val jsonArray = callAPI("https://api.ridewta.com/stops/$stopNum")
             if (jsonArray == null) {
-                val errObj = Route( "System error", "System Error", "#FFFFFF")
-                routeList.add(errObj)
+                return null
             } else {
-                for (i in (0..<jsonArray.length())) {
-                    val jsonObject: JSONObject = jsonArray.getJSONObject(i)
-                    val routeNum = jsonObject.getString("routeNum")
-                    val routeName = jsonObject.getString("routeName")
-                    val routeColor = jsonObject.getString("routeColor")
+                val jsonObject = jsonArray.getJSONObject(0)
+                val id = jsonObject.getString("id").toInt()
+                val name: String? = jsonObject.getString("name")
+                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
+                val longitude: Float = jsonObject.getString("longitude").toFloat()
+                val sNum: Int = jsonObject.getInt("stopNum")
 
-                    val route = Route(routeNum,routeName, routeColor)
+                val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
+                    stopNum = sNum)
 
-                    routeList.add(route)
-
-                }
+                return stop
             }
-
-            return routeList
         }
 
         // Return the street the stop is on
@@ -227,6 +246,129 @@ class WTAApi {
             }
         }
 
-    }
+        // Gets a specific pattern from a JSON object that represents that pattern
+        private fun getPattern(patternJSON : JSONObject) : PatternObject {
+            val sequenceNum : Int = patternJSON.getInt("seq")
+            val latitude: Float = patternJSON.getString("lat").toFloat()
+            val longitude: Float = patternJSON.getString("lon").toFloat()
+            val typeStr : String = patternJSON.getString("typ")
+            val pdist : Int = patternJSON.getInt("pdist")
+            val stopNum : Int?
+            var stop : StopObject? = null
 
+            if (typeStr == "S") {
+                try {
+                    // If this passes, the pattern is a stop and stopObject has been initialized.
+                    stopNum = patternJSON.getString("stpid").toInt()
+                    stop = getStop(stopNum)
+                } catch (e: JSONException) {
+                    Log.d("@_@", "Pattern JSON Exception : $e")
+                } catch (e: FileNotFoundException) {
+                    Log.d("@_@", "Stop not found : $e")
+                }
+            }
+
+            val patternObject = PatternObject(
+                seq = sequenceNum,
+                lat = latitude,
+                long = longitude,
+                type = typeStr,
+                pdist = pdist,
+                stop = stop
+            )
+
+            return patternObject
+        }
+
+
+        // This is un-used for now
+        // Gets a specific pattern from a JSON Object that represents the route pattern
+        private fun getRoutePattern(jsonObject: JSONObject) : RoutePattern {
+            val routePattern : RoutePattern
+            val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
+            /**
+             *      Potentially useful for debug
+             *
+            val id = jsonObject.getInt("pid")
+            val lineNum = jsonObject.getInt("ln")
+            val lineDirection : String = jsonObject.getString("rtdir")
+             */
+            val pattern : JSONArray = jsonObject.getJSONArray("pt")
+            for (j in (0..<pattern.length())) {
+                val patternJSON = pattern.getJSONObject(j)
+                val patternObject = getPattern(patternJSON)
+                patternList.add(patternObject)
+            }
+
+            routePattern = RoutePattern(
+                pid = jsonObject.getInt("pid"),
+                lineNum = jsonObject.getInt("ln"),
+                routeDir = jsonObject.getString("rtdir"),
+                pt = patternList
+            )
+
+            return routePattern
+        }
+
+        // Gets the List of Route Patterns
+        fun getRoutePatterns(routeNum: Int) : MutableList<RoutePattern>? {
+            var routePatternList : MutableList<RoutePattern>? = emptyList<RoutePattern>().toMutableList()
+            val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
+            val responseJsonArray = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
+
+            if (responseJsonArray == null) {
+                return null
+            } else {
+
+                for (i in (0..<responseJsonArray.length())) {
+                    val routePattern : RoutePattern
+                    val jsonObject: JSONObject = responseJsonArray.getJSONObject(i)
+                    val patternJSONArray : JSONArray = jsonObject.getJSONArray("pt")
+
+                    for (j in (0..<patternJSONArray.length())) {
+                        val patternJSON = patternJSONArray.getJSONObject(j)
+                        val patternObject = getPattern(patternJSON)
+                        patternList.add(patternObject)
+                    }
+
+                    routePattern = RoutePattern(
+                        pid = jsonObject.getInt("pid"),
+                        lineNum = jsonObject.getInt("ln"),
+                        routeDir = jsonObject.getString("rtdir"),
+                        pt = patternList
+                    )
+                    routePatternList!!.add(routePattern)
+                }
+            }
+            Log.d("@@@", "Routes Loaded!")
+            return routePatternList
+        }
+
+        // Gets a list of routes
+        fun getRoutes(): List<Route>? {
+            val routeList = mutableListOf<Route>()
+            val jsonArray = callAPI("https://api.ridewta.com/routes")
+
+            if (jsonArray == null) {
+                return null
+            } else {
+                for (i in (0..<jsonArray.length())) {
+                    val jsonObject: JSONObject = jsonArray.getJSONObject(i)
+                    val routeNum = jsonObject.getString("routeNum").toInt()
+                    val name: String = jsonObject.getString("routeName")
+                    val color: String = jsonObject.getString("routeColor")
+
+
+                    // val patternList = getRoutePatterns(routeNum)
+                    val route = Route(routeNum = routeNum, name = name, color = color, pattern = null)
+
+                    routeList.add(route)
+
+                }
+            }
+
+            return routeList
+
+        }
+    }
 }
