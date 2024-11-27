@@ -73,6 +73,24 @@ class TransitViewModel(context: Context) : ViewModel() {
         }
     }
 
+    /**
+     * Removes the displayed [Route]
+     * -- WARNING --
+     * This function sets:
+     *  -   [TransitUiState.displayedRoute] to null
+     *  -   [TransitUiState.polylineOptions] to null
+     *  -   [TransitUiState.markers] to be an empty mutable map
+     */
+    fun rmDisplayedRoute() {
+        _uiState.update {
+            it.copy(
+                displayedRoute = null,
+                polylineOptions = null,
+                markers = mutableMapOf<MarkerState, MarkerOptions>()
+
+            )
+        }
+    }
 
     /**
      * Updates the viewModel's [TransitUiState.displayRoute] by passing the [route] to the [WTAApi].
@@ -182,10 +200,13 @@ class TransitViewModel(context: Context) : ViewModel() {
     }
 
     /**
-     * Updates the viewModel's [TransitUiState.polylineOptions] from changes in [r]\
+     * Updates the viewModel's [TransitUiState.polylineOptions] from changes in [r]
+     * Also displays the passed [Route]'s [StopObject] dependent on the parameter [displayStops]
+     *
      * @param r [Route]
+     * @param displayStops [Boolean]
      */
-    private fun updatePolyLine(r : Route) {
+    private fun updatePolyLine(r : Route, displayStops : Boolean = true) {
         val points : MutableList<LatLng> = mutableListOf<LatLng>()
         val pLOptions = polylineOptions { PolylineOptions()
             .color(Color(android.graphics.Color.parseColor((r.color))).toArgb())
@@ -193,6 +214,9 @@ class TransitViewModel(context: Context) : ViewModel() {
         }
         r.pattern?.forEach { routePattern ->
             routePattern.pt.forEach { patternObj ->
+                if (displayStops) {
+                    patternObj.stop?.let { addMarker(it) }
+                }
                 val latLng = LatLng(patternObj.lat.toDouble(), patternObj.long.toDouble())
                 points.add(latLng)
                 pLOptions.add(latLng)
