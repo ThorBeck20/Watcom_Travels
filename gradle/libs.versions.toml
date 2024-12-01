@@ -7,11 +7,14 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
-composeBom = "2024.04.01"
-mockitoKotlin = "x.x.x"
+composeBom = "2024.11.00"
+mapsCompose = "6.2.1"
+mockitoKotlin = "5.4.0"
 googleAndroidLibrariesMapsplatformSecretsGradlePlugin = "2.0.1"
+playServicesLocation = "21.3.0"
 playServicesMaps = "19.0.0"
 appcompat = "1.7.0"
+secretsGradlePlugin = "2.0.1"
 uiTextGoogleFonts = "1.7.5"
 
 [libraries]
@@ -32,12 +35,16 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 junit-junit = { module = "junit:junit" }
 kotlin-mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 mockito-core = { module = "org.mockito:mockito-core" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin" }
 mockito-mockito-core = { module = "org.mockito:mockito-core" }
 mockito-mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin" }
+mockk = { module = "io.mockk:mockk" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+secrets-gradle-plugin = { module = "com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin", version.ref = "secretsGradlePlugin" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
