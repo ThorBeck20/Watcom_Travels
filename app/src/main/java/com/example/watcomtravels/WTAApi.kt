@@ -14,7 +14,7 @@ const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
 
 // Class to store the stops
 data class StopObject (
-    val id : Int,            // The id of the stop
+    val id : Int,            // The id of the stop (index in stops array)
     val name : String?,      // The name of the stop
     val lat : Float,         // The latitude of the stop
     val long : Float,        // The longitude
@@ -31,7 +31,7 @@ data class Prediction (
 
 // Data class to store routes
 data class Route (
-    val routeNum: Int,
+    val routeNum: String,
     val name : String,
     val color : String,
     var pattern : MutableList<RoutePattern>?
@@ -60,9 +60,31 @@ class WTAApi {
     companion object {
         // Return a list of StopObjects
         // List contains only errObj in event of WTA API errors
+        // Handles getting the JSONArray for api work
+        private fun callAPI(urlString: String): String? {
+            val errWTA = "No JSONArray, String instead - WTA API error likely"
+            val errMsg = "FileNotFoundException - Attempt refresh"
+
+            try {
+                val url = URL(urlString)
+                val connection = url.openConnection()
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+                val content = connection.getInputStream().bufferedReader().readText()
+                return content
+
+            } catch(e: JSONException) {
+                Log.d("ERROR", errWTA)
+                return null
+            } catch(e: FileNotFoundException) {
+                Log.d("ERROR", errMsg)
+                return null
+            }
+        }
+
         fun getStopObjets(): List<StopObject>? {
             val stopList = mutableListOf<StopObject>()
-            val jsonArray: JSONArray? = callAPI("https://api.ridewta.com/stops")
+            val response = callAPI("https://api.ridewta.com/stops")
+            val jsonArray = JSONArray(response)
 
             if (jsonArray == null) {
                 return null
@@ -91,7 +113,9 @@ class WTAApi {
 
         // Gets the stop information through the stop Number
         fun getStop(stopNum: Int) : StopObject? {
-            val jsonArray = callAPI("https://api.ridewta.com/stops/$stopNum")
+            val json = callAPI("https://api.ridewta.com/stops/$stopNum")
+            val jsonArray = JSONArray(json)
+
             if (jsonArray == null) {
                 return null
             } else {
@@ -112,7 +136,9 @@ class WTAApi {
         // Return the street the stop is on
         // id = StopNum
         fun getStreet(id: Int): String {
-            val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
+            val json = callAPI("https://api.ridewta.com/stops/$id")
+            val jsonArray = JSONArray(json)
+
             if (jsonArray == null) {
                 return "N/A"
             } else {
@@ -126,7 +152,9 @@ class WTAApi {
         // Return the lighting status of the street
         // id = StopNum
         fun getLighting(id: Int): String {
-            val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
+            val json = callAPI("https://api.ridewta.com/stops/$id")
+            val jsonArray = JSONArray(json)
+
             if (jsonArray == null) {
                 return "N/A"
             } else {
@@ -140,7 +168,9 @@ class WTAApi {
         // Return the shelter status of the street
         // id = StopNum
         fun getShelter(id: Int): String {
-            val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
+            val json = callAPI("https://api.ridewta.com/stops/$id")
+            val jsonArray = JSONArray(json)
+
             if (jsonArray == null) {
                 return "N/A"
             } else {
@@ -154,7 +184,9 @@ class WTAApi {
         // Return the lighting status of the street
         // id = StopNum
         fun getBench(id: Int): String {
-            val jsonArray = callAPI("https://api.ridewta.com/stops/$id")
+            val json = callAPI("https://api.ridewta.com/stops/$id")
+            val jsonArray = JSONArray(json)
+
             if (jsonArray == null) {
                 return "N/A"
             } else {
@@ -211,7 +243,9 @@ class WTAApi {
             val bulls = mutableListOf<String>()
             val noBulletins = "No current bulletins for this stop"
 
-            val jsonArray = callAPI("https://api.ridewta.com/stops/$id/bulletins")
+            val json = callAPI("https://api.ridewta.com/stops/$id/bulletins")
+            val jsonArray = JSONArray(json)
+
             if (jsonArray == null) {
                 bulls.add(noBulletins)
             } else {
@@ -223,27 +257,6 @@ class WTAApi {
             }
 
             return bulls
-        }
-
-        // Handles getting the JSONArray for api work
-        private fun callAPI(urlString: String): JSONArray? {
-            val errWTA = "No JSONArray, String instead - WTA API error likely"
-            val errMsg = "FileNotFoundException - Attempt refresh"
-
-            try {
-                val url = URL(urlString)
-                val connection = url.openConnection()
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
-                val content = connection.getInputStream().bufferedReader().readText()
-                val jsonArray = JSONArray(content)
-                return jsonArray
-            } catch(e: JSONException) {
-                Log.d("ERROR", errWTA)
-                return null
-            } catch(e: FileNotFoundException) {
-                Log.d("ERROR", errMsg)
-                return null
-            }
         }
 
         // Gets a specific pattern from a JSON object that represents that pattern
@@ -311,10 +324,12 @@ class WTAApi {
         }
 
         // Gets the List of Route Patterns
-        fun getRoutePatterns(routeNum: Int) : MutableList<RoutePattern>? {
+        fun getRoutePatterns(routeNum: String) : MutableList<RoutePattern>? {
             var routePatternList : MutableList<RoutePattern>? = emptyList<RoutePattern>().toMutableList()
             val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
-            val responseJsonArray = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
+
+            val responseJson = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
+            val responseJsonArray = JSONArray(responseJson)
 
             if (responseJsonArray == null) {
                 return null
@@ -348,14 +363,17 @@ class WTAApi {
         // Gets a list of routes
         fun getRoutes(): List<Route>? {
             val routeList = mutableListOf<Route>()
-            val jsonArray = callAPI("https://api.ridewta.com/routes")
+            val response = callAPI("https://api.ridewta.com/routes")
+            val json = JSONObject(response)
+            val jsonArray = json.getJSONArray("routes")
 
             if (jsonArray == null) {
                 return null
             } else {
                 for (i in (0..<jsonArray.length())) {
+
                     val jsonObject: JSONObject = jsonArray.getJSONObject(i)
-                    val routeNum = jsonObject.getString("routeNum").toInt()
+                    val routeNum = jsonObject.getString("routeNum")
                     val name: String = jsonObject.getString("routeName")
                     val color: String = jsonObject.getString("routeColor")
 

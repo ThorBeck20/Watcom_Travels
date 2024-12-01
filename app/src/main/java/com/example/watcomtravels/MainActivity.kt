@@ -19,9 +19,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -96,7 +99,7 @@ class MainActivity : ComponentActivity() {
                     withContext(Dispatchers.Main){
                         fetchedStops?.let { stops.addAll(it) }
                         loaded = true
-                        Log.d("@@@", "STOPS LOADED")
+                        Log.d("@@@", "STOPS LOADED: ${stops.size}")
                     }
 
                 }
@@ -238,7 +241,7 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
         } else {
             BottomSheetScaffold(
                 scaffoldState = scaffoldState,
-                sheetPeekHeight = 256.dp,
+                sheetPeekHeight = 300.dp,
                 sheetShadowElevation = 24.dp,
                 topBar = {
                     CenterAlignedTopAppBar(
@@ -285,7 +288,7 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
                 ) {
 
 
-                    //mapComposable.invoke()
+                    mapComposable.invoke()
 
                 }
             }
@@ -297,26 +300,26 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
 
 @Composable
 fun RoutesMain() {
-    val routes: MutableList<Route> = remember { mutableStateListOf<Route>()}
+    val routes = remember { mutableStateListOf<Route>() }
+    var mExpanded by remember { mutableStateOf(false) }
+    var mSelectedText by remember { mutableStateOf("Select a route") }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val fetchedRoutes = WTAApi.getRoutes()
-            withContext(Dispatchers.Main){
+            Log.d("@@@", "Fetched Routes: ${fetchedRoutes?.size ?: 0}")
+            withContext(Dispatchers.Main) {
                 fetchedRoutes?.let { routes.addAll(it) }
-                Log.d("@@@", "Routes LOADED")
+                Log.d("@@@", "Routes LOADED: ${routes.size}")
             }
-
         }
     }
-    var mExpanded by remember { mutableStateOf(true) }
-    var mSelectedText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .padding(16.dp)
             .fillMaxWidth()
-    ){
+    ) {
         Text(
             "Routes",
             fontSize = 32.sp,
@@ -324,28 +327,52 @@ fun RoutesMain() {
             fontWeight = FontWeight.SemiBold
         )
 
-        DropdownMenu(
-            expanded = mExpanded,
-            onDismissRequest = { mExpanded = false },
+        Box(
             modifier = Modifier
-                .width(500.dp)
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .wrapContentSize(Alignment.TopStart)
         ) {
-            routes.forEach { route ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            route.name
-                        )
-                    },
-                    onClick = {
-                        mSelectedText = route.name
-                        mExpanded = false
+            Text(
+                mSelectedText,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        mExpanded = true
+                        Log.d("@@@", "Dropdown Triggered")
                     }
-                )
+                    .background(Color.LightGray)
+                    .padding(8.dp),
+                fontSize = 16.sp
+            )
+
+            DropdownMenu(
+                expanded = mExpanded,
+                onDismissRequest = { mExpanded = false },
+                modifier = Modifier.wrapContentHeight()
+            ) {
+                if (routes.isEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text("No routes available") },
+                        onClick = {}
+                    )
+                } else {
+                    routes.forEach { route ->
+                        DropdownMenuItem(
+                            text = { Text(route.name) },
+                            onClick = {
+                                mSelectedText = route.name
+                                mExpanded = false
+                                Log.d("@@@", "Route Selected: ${route.name}")
+                            }
+                        )
+                    }
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun StopRow(stopList: MutableList<StopObject>, stopType: String) {
