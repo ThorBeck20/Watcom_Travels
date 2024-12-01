@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
+    // alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
 }
 
 android {
@@ -68,17 +68,14 @@ dependencies {
     // Required -- JUnit 4 framework
     testImplementation(libs.junit.junit)
     // Optional -- Robolectric environment
-    testImplementation(libs.androidx.core)
+    // testImplementation(libs.androidx.core)
     // Optional -- Mockito framework
-    testImplementation(libs.mockito.core)
+    testImplementation ("org.mockito:mockito-core:5.14.2")
     // Optional -- mockito-kotlin
-    testImplementation(libs.mockito.kotlin)
-    testImplementation(libs.kotlin.mockito.kotlin)
-    testImplementation(libs.mockito.mockito.core)
-    // Optional -- mockito-kotlin
-    testImplementation(libs.mockito.mockito.kotlin)
+    // testImplementation ("org.mockito.kotlin:mockito-kotlin:5.14.2")
+    // testImplementation ("org.kotlin.mockito:kotlin-mockito:5.14.2")
     // Optional -- Mockk framework
-    testImplementation("io.mockk:mockk")
-
+    // testImplementation("io.mockk:mockk")
+    testImplementation ("org.json:json:20240303")
 
 }

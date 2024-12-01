@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
-                    val fetchedStops = WTAApi.getStopObjets()
+                    val fetchedStops = WTAApi.getStopObjects()
                     withContext(Dispatchers.Main){
                         fetchedStops?.let { stops.addAll(it) }
                         loaded = true
