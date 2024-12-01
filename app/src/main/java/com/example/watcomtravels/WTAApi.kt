@@ -58,8 +58,6 @@ data class PatternObject (
 // All functions in WTAApi must be called in an IO thread
 class WTAApi {
     companion object {
-        // Return a list of StopObjects
-        // List contains only errObj in event of WTA API errors
         // Handles getting the JSONArray for api work
         private fun callAPI(urlString: String): String? {
             val errWTA = "No JSONArray, String instead - WTA API error likely"
@@ -81,23 +79,22 @@ class WTAApi {
             }
         }
 
-        fun getStopObjets(): List<StopObject>? {
+        // Return a list of StopObjects
+        // List returns null in event of WTA API errors
+        fun getStopObjects(): List<StopObject>? {
             val stopList = mutableListOf<StopObject>()
             val response = callAPI("https://api.ridewta.com/stops")
             val jsonArray = JSONArray(response)
 
             if (jsonArray == null) {
                 return null
-//                val errObj = StopObject(-1, "System error", 48.73.toFloat(),
-//                    -122.49.toFloat(), -1)
-//                stopList.add(errObj)
             } else {
                 for (i in (0..<jsonArray.length())) {
                     val jsonObject: JSONObject = jsonArray.getJSONObject(i)
-                    val id = jsonObject.getString("id").toInt()
+                    val id = jsonObject.getInt("id")
                     val name: String? = jsonObject.getString("name")
-                    val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
-                    val longitude: Float = jsonObject.getString("longitude").toFloat()
+                    val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
+                    val longitude: Float = jsonObject.getDouble("longitude").toFloat()
                     val sNum: Int = jsonObject.getInt("stopNum")
 
                     val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
@@ -120,10 +117,10 @@ class WTAApi {
                 return null
             } else {
                 val jsonObject = jsonArray.getJSONObject(0)
-                val id = jsonObject.getString("id").toInt()
+                val id = jsonObject.getInt("id")
                 val name: String? = jsonObject.getString("name")
-                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
-                val longitude: Float = jsonObject.getString("longitude").toFloat()
+                val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
+                val longitude: Float = jsonObject.getDouble("longitude").toFloat()
                 val sNum: Int = jsonObject.getInt("stopNum")
 
                 val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
