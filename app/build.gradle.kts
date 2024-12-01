@@ -61,8 +61,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation("com.google.android.gms:play-services-location:21.3.0")
-    implementation("com.google.maps.android:maps-compose:6.2.1")
+    implementation(libs.play.services.location)
+    implementation(libs.maps.compose)
+    implementation(libs.secrets.gradle.plugin)
+
 
 
     // Required -- JUnit 4 framework
