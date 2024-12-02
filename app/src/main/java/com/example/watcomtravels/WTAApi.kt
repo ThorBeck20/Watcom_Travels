@@ -466,5 +466,31 @@ class WTAApi {
             }
 
         }
+
+        fun getRouteBulletins(id: String): List<ServiceBulletin> {
+            val bulls = mutableListOf<ServiceBulletin>()
+
+            val json = callAPI("https://api.ridewta.com/routes/$id/bulletins")
+
+
+            if (json == null) {
+                return emptyList()
+            } else {
+                val jsonArray = JSONArray(json)
+                for (b in 0..<jsonArray.length()) {
+                    val jsonObject: JSONObject = jsonArray.getJSONObject(b)
+                    val bulletin = ServiceBulletin(
+                        subject = jsonObject.getString("sbj"),
+                        brief = jsonObject.getString("brf"),
+                        priority = jsonObject.getString("prty"),
+                        effect = jsonObject.getString("efct"),
+                        service = jsonObject.getJSONArray("srvc")
+                    )
+                    bulls.add(bulletin)
+                }
+            }
+
+            return bulls
+        }
     }
 }
