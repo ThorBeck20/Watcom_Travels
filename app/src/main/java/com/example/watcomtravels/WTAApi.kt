@@ -100,10 +100,8 @@ class WTAApi {
             val stopList = mutableListOf<StopObject>()
             val response = callAPI("https://api.ridewta.com/stops")
 
-
             if (response == null) {
                 return null
-
             } else {
                 val jsonArray = JSONArray(response)
 
@@ -287,26 +285,28 @@ class WTAApi {
         }
 
         // Compiles/returns a list of PatternObjects for a given route for the database
-        // In progress; not currently usable
-        /* fun getPOs(route: String): List<PatternObject>? {
-            val poList = mutableListOf<PatternObject>()
-            val firstArray = callAPI("https://api.ridewta.com/routes/$route/patterns")
-            val secondArray = JSONArray(firstArray)
+        // In progress
+        fun getPOs(route: String): List<PatternObject>? {
+            val arrayStr = callAPI("https://api.ridewta.com/routes/$route/patterns")
 
-            if (secondArray == null) {
+            if (arrayStr == null) {
                 return null
             } else {
-                val routePattern : RoutePattern
-                val jsonObject: JSONObject = secondArray.getJSONObject(i)
-                val patternJSONArray : JSONArray = jsonObject.getJSONArray("pt")
+                val jsonArray = JSONArray(arrayStr)
+                val patternList = mutableListOf<PatternObject>()
 
-                for (j in (0..<patternJSONArray.length())) {
-                    val patternJSON = patternJSONArray.getJSONObject(j)
-                    val patternObject = getPattern(patternJSON)
-                    patternList.add(patternObject)
+                val jsonObject = jsonArray.getJSONObject(0)
+                val patternArray = jsonObject.getJSONArray("pt")
+
+                for (i in (0..<patternArray.length())) {
+                    val patternObject = patternArray.getJSONObject(i)
+                    val toAdd = getPattern(patternObject)
+                    patternList.add(toAdd)
                 }
+
+                return patternList
             }
-        } */
+        }
 
         // Gets a specific pattern from a JSON object that represents that pattern
         private fun getPattern(patternJSON : JSONObject) : PatternObject {
