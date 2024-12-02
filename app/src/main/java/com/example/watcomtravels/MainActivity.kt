@@ -12,7 +12,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -34,20 +32,30 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,8 +79,8 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.coroutines.resume
@@ -81,6 +89,10 @@ import kotlin.coroutines.suspendCoroutine
 private lateinit var fusedLocationClient: FusedLocationProviderClient
 var showStopInfo by mutableStateOf<StopObject?>(null)
 var showRouteInfo by mutableStateOf<Route?>(null)
+var showSettings by mutableStateOf(false)
+var showFavorites by mutableStateOf(false)
+
+var timeOption by mutableStateOf(false) // true = military, false = standard
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,21 +147,69 @@ class MainActivity : ComponentActivity() {
 
             val defaultStops = getDefaultStops()
             val nearbyStops: MutableList<StopObject>? = getNearbyStops(stops, location)
+            val items =
+                listOf(
+                    Icons.Default.Settings,
+                    Icons.Default.Favorite
+                )
+            val selectedItem = remember { mutableStateOf(items[0]) }
+            val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                if(nearbyStops != null){
-                    LandscapeUI(mapComposable, nearbyStops)
-                }else{
-                    LandscapeUI(mapComposable, defaultStops)
-                }
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet(drawerState){
+                        Column(
 
-            } else {
-                if(nearbyStops != null){
-                    PortraitUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel)
-                }else{
-                    PortraitUI(mapComposable, defaultStops, "Popular stops", transitViewModel)
+                        ){
+                            Spacer(
+                                modifier = Modifier
+                                    .height(4.dp)
+                            )
+
+                            NavigationDrawerItem(
+                                icon = { Icon(Icons.Default.Settings, contentDescription = null)},
+                                label = { Text("Settings") },
+                                selected = Icons.Default.Settings == selectedItem.value,
+                                onClick = {
+                                    showSettings = true
+                                          },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                            )
+
+                            NavigationDrawerItem(
+                                icon = { Icon(Icons.Default.Favorite, contentDescription = null)},
+                                label = { Text("Favorites") },
+                                selected = Icons.Default.Favorite == selectedItem.value,
+                                onClick = {
+                                    showFavorites = true
+                                },
+                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                            )
+
+                        }
+                    }
+                },
+                content = {
+
+                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        if(nearbyStops != null){
+                            LandscapeUI(mapComposable, nearbyStops, drawerState)
+                        }else{
+                            LandscapeUI(mapComposable, defaultStops, drawerState)
+                        }
+
+                    } else {
+                        if(nearbyStops != null){
+                            PortraitUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
+                        }else{
+                            PortraitUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
+                        }
+                    }
                 }
-            }
+            )
+
+
 
 
         }
@@ -242,9 +302,9 @@ private fun PortraitUI(
     mapComposable: @Composable () -> Unit,
     stops: MutableList<StopObject>,
     stopType: String,
-    transitViewModel: TransitViewModel
+    transitViewModel: TransitViewModel,
+    drawerState: DrawerState
 ) {
-
     Column(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -256,81 +316,101 @@ private fun PortraitUI(
             StopInfoPage(showStopInfo!!)
         } else if (showRouteInfo != null) {
             RouteInfoPage(showRouteInfo!!, mapComposable)
+        }else if (showSettings){
+            LaunchedEffect(Unit){
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+            SettingsPage()
+        }else if(showFavorites){
+            LaunchedEffect(Unit){
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+
+            FavoritesPage()
         } else {
-            val scrollState = rememberScrollState()
-            BottomSheetScaffold(
-                scaffoldState = scaffoldState,
-                sheetPeekHeight = 300.dp,
-                sheetShadowElevation = 24.dp,
-                topBar = {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            Row(
 
-                            ) {
+                val scrollState = rememberScrollState()
+                BottomSheetScaffold(
+                    scaffoldState = scaffoldState,
+                    sheetPeekHeight = 300.dp,
+                    sheetShadowElevation = 24.dp,
+                    topBar = {
+                        CenterAlignedTopAppBar(
+                            title = {
+                                Row(
 
-                                TextField(
-                                    value = searchText.value,
-                                    modifier = Modifier
-                                        .fillMaxWidth(),
-                                    onValueChange = {
-                                        searchText.value = it
-                                    },
-                                    placeholder = {
-                                        Text("Where to?")
-                                    },
-                                    shape = RoundedCornerShape(50.dp),
-                                    singleLine = true
+                                ) {
 
-                                )
+                                    TextField(
+                                        value = searchText.value,
+                                        modifier = Modifier
+                                            .fillMaxWidth(),
+                                        onValueChange = {
+                                            searchText.value = it
+                                        },
+                                        placeholder = {
+                                            Text("Where to?")
+                                        },
+                                        shape = RoundedCornerShape(50.dp),
+                                        singleLine = true
 
-
-
-                            }
-
-                        },
-                        navigationIcon = {
-                            IconButton(
-                                onClick = {
-
-                                },
-                                content = {
-                                    Icon(
-                                        Icons.Filled.Menu,
-                                        "Menu",
-                                        tint = MaterialTheme.colorScheme.primary
                                     )
+
+
+
                                 }
-                            )
+
+                            },
+                            navigationIcon = {
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            drawerState.open()
+                                        }
+                                    },
+                                    content = {
+                                        Icon(
+                                            Icons.Filled.Menu,
+                                            "Menu",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                )
+                            }
+                        )
+                    },
+                    sheetContent = {
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(scrollState),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            RoutesMain(transitViewModel)
+                            StopRow(stops, stopType)
+                            BulletinsMain()
+
                         }
-                    )
-                },
-                sheetContent = {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(scrollState),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    }
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.Center
                     ) {
-                        RoutesMain(transitViewModel)
-                        StopRow(stops, stopType)
-                        BulletinsMain()
+
+
+                        mapComposable.invoke()
 
                     }
                 }
-            ) { innerPadding ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
 
 
-                    mapComposable.invoke()
-
-                }
-            }
 
         }
 
@@ -339,7 +419,11 @@ private fun PortraitUI(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LandscapeUI(mapComposable: @Composable () -> Unit, stops: MutableList<StopObject>?) {
+private fun LandscapeUI(
+    mapComposable: @Composable () -> Unit,
+    stops: MutableList<StopObject>?,
+    drawerState: DrawerState
+) {
 
     val searchText = rememberSaveable { mutableStateOf("") }
 
@@ -350,7 +434,7 @@ private fun LandscapeUI(mapComposable: @Composable () -> Unit, stops: MutableLis
         if (showStopInfo != null) {
             StopInfoPage(showStopInfo!!)
         } else if (showRouteInfo != null) {
-
+            RouteInfoPage(showRouteInfo!!, mapComposable)
         } else {
             Scaffold(
                 topBar = {
@@ -428,7 +512,15 @@ fun StopCard(stop: StopObject) {
     Box(
         modifier = Modifier
             .size(width = 150.dp, height = 100.dp)
-            .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+            .background(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(20)
+            )
+            .border(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(20)
+            )
             .padding(16.dp)
             .clickable(
                 enabled = true,
@@ -566,12 +658,20 @@ fun StopInfoPage(stop: StopObject) {
                         modifier = Modifier
                             .wrapContentSize()
                             .fillMaxWidth()
-                            .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(20)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(20)
+                            )
                             .padding(8.dp)
                             .clickable(
                                 enabled = true,
                                 onClick = {
-                                        //showRouteInfo = route
+                                    //showRouteInfo = route
                                 }
                             )
                     ){
@@ -643,7 +743,15 @@ fun StopInfoPage(stop: StopObject) {
                                 modifier = Modifier
                                     .wrapContentHeight()
                                     .fillMaxWidth()
-                                    .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(20)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(20)
+                                    )
                                     .padding(16.dp)
                                     .clickable(
                                         enabled = true,
@@ -783,7 +891,15 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
             modifier = Modifier
                 .wrapContentHeight()
                 .fillMaxWidth()
-                .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(20)
+                )
+                .border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(20)
+                )
                 .padding(16.dp)
                 .clickable(
                     enabled = true,
@@ -899,7 +1015,8 @@ fun RouteInfoPage(route: Route, mapComposable: @Composable () -> Unit) {
                         .background(
                             color = MaterialTheme.colorScheme.primaryContainer,
                             shape = RoundedCornerShape(20)
-                        ).border(
+                        )
+                        .border(
                             width = 2.dp, color = MaterialTheme.colorScheme.primaryContainer,
                             shape = RoundedCornerShape(20)
                         )
@@ -973,7 +1090,8 @@ fun RouteInfoPage(route: Route, mapComposable: @Composable () -> Unit) {
                                     .background(
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                         shape = RoundedCornerShape(20)
-                                    ).border(
+                                    )
+                                    .border(
                                         width = 2.dp,
                                         color = MaterialTheme.colorScheme.primaryContainer,
                                         shape = RoundedCornerShape(20)
@@ -1063,7 +1181,15 @@ fun BulletinsMain(){
                         modifier = Modifier
                             .wrapContentHeight()
                             .fillMaxWidth()
-                            .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(20)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(20)
+                            )
                             .padding(16.dp)
                             .clickable(
                                 enabled = true,
@@ -1123,6 +1249,165 @@ fun DisplayServiceBulletinInfo(service: JSONArray) {
     for (item in affectedServices){
         Text("Route: ${item.getString("rt")} ${item.getString("rtdir")}",
             fontSize = 16.sp)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsPage(){
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+
+                    ){
+                        Text(
+                            "Settings",
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            showSettings = false
+                        },
+                        content = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                "Back",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                },
+                colors = TopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    actionIconContentColor = Color.Transparent
+
+                ),
+
+
+                )
+
+        }
+    ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+
+
+                Text(
+                    "Time Preference",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                Text(
+                    "Choose how stop arrival times are displayed",
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                RadioButton(
+                    selected = !timeOption,
+                    onClick = {
+                        timeOption = false
+                    })
+                Text("Standard Time")
+            }
+
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                RadioButton(
+                    selected = timeOption,
+                    onClick = {
+                        timeOption = true
+                    })
+                Text("Military Time")
+            }
+
+        }
+
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FavoritesPage(){
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+
+                    ){
+                        Text(
+                            "Favorites",
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            showFavorites = false
+                        },
+                        content = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                "Back",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                },
+                colors = TopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    actionIconContentColor = Color.Transparent
+
+                ),
+
+
+                )
+
+        }
+    ) { innerpadding ->
+        //TODO// --get favorite stops from DB
     }
 }
 
