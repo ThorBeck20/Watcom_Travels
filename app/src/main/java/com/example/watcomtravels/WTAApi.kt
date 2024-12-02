@@ -8,12 +8,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.RectangularBounds
+import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.maps.android.ktx.BuildConfig
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
-import io.ktor.client.engine.callContext
-import io.ktor.client.request.get
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -84,22 +81,6 @@ data class ServiceBulletin(
 
 // All functions in WTAApi must be called in an IO thread
 class WTAApi {
-
-//    val placesClient : HttpURLConnection
-//
-//    fun onCreate(context : Context) {
-//        // Gets API key using secrets
-//        val apiKey = BuildConfig.MAPS_API_KEY
-//
-//        // Checks API key is not empty
-//        if (apiKey.isEmpty() || apiKey = "DEFAULT_API_KEY") {
-//            Log.e("Places API", "Missing API key")
-//            return
-//        }
-//
-//        Places.initializeWithNewPlacesApiEnabled(context, apiKey)
-//        placesClient = Places.createClient(context)
-//    }
 
     companion object {
         // Handles getting the JSONArray for api work
@@ -532,7 +513,7 @@ class WTAApi {
         /**
          * Calls the placesAPI
          */
-        private suspend fun callPlacesAPI(str: String) : String? {
+        private fun callPlacesAPI(str: String) : String? {
             var retStr : String
             try {
                 // Specify what kind of things to return
@@ -545,7 +526,6 @@ class WTAApi {
                 val searchByTextRequest = SearchByTextRequest.builder(str, placeFields)
                     .setMaxResultCount(10)
                     .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound)).build()
-
 
 
             } catch (e : Exception) {
