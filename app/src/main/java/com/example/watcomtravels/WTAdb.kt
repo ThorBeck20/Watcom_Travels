@@ -6,8 +6,6 @@ import android.database.sqlite.SQLiteOpenHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// All databases tested and functional as of testing
-
 // Class to store trip stops together
 data class TripSet (
     val first : Int,    // first stop of a trip
@@ -158,7 +156,7 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null
     }
 }
 
-//
+// Database of RoutePattern objects - no size limit
 class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE IF NOT EXISTS ROUTES(route TEXT, pid INT, line INT, direct TEXT)")
@@ -212,8 +210,13 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         return ret
     }
 
-    // fetches routepattern lists for the routes
-    private fun fetchRPs(route: String){
-        //
+    // fetches RoutePattern lists for the routes
+    // function calling must do so in IO thread
+    private suspend fun fetchRPs(route: String): List<PatternObject>? {
+        val rp : List<PatternObject>?
+        withContext(Dispatchers.IO) {
+            rp = WTAApi.getPOs(route)
+        }
+        return rp
     }
 }
