@@ -55,20 +55,34 @@ data class PatternObject (
     val stop : StopObject?
 )
 
+data class ServiceBulletin(
+    val subject: String,
+    val brief: String,
+    val priority: String,
+    val effect: String,
+    val service: JSONArray
+)
+
 // All functions in WTAApi must be called in an IO thread
 class WTAApi {
     companion object {
         // Handles getting the JSONArray for api work
         private fun callAPI(urlString: String): String? {
-            val errWTA = "No JSONArray, String instead - WTA API error likely"
+            val errWTA = "No JSONObject, String instead - WTA API error likely"
             val errMsg = "FileNotFoundException - Attempt refresh"
+            val url = URL(urlString)
+            val connection = url.openConnection()
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+            val content = connection.getInputStream().bufferedReader().readText()
 
             try {
-                val url = URL(urlString)
-                val connection = url.openConnection()
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
-                val content = connection.getInputStream().bufferedReader().readText()
-                return content
+
+                if (content.trim().startsWith("{") || content.trim().startsWith("[")){
+                    return content
+                }else{
+                    Log.d("ERROR", errWTA)
+                    return null
+                }
 
             } catch(e: JSONException) {
                 Log.d("ERROR", errWTA)
@@ -77,6 +91,7 @@ class WTAApi {
                 Log.d("ERROR", errMsg)
                 return null
             }
+
         }
 
         // Return a list of StopObjects
@@ -84,17 +99,18 @@ class WTAApi {
         fun getStopObjects(): List<StopObject>? {
             val stopList = mutableListOf<StopObject>()
             val response = callAPI("https://api.ridewta.com/stops")
-            val jsonArray = JSONArray(response)
 
-            if (jsonArray == null) {
+            if (response == null) {
                 return null
             } else {
+                val jsonArray = JSONArray(response)
+
                 for (i in (0..<jsonArray.length())) {
                     val jsonObject: JSONObject = jsonArray.getJSONObject(i)
-                    val id = jsonObject.getInt("id")
+                    val id = jsonObject.getString("id").toInt()
                     val name: String? = jsonObject.getString("name")
-                    val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
-                    val longitude: Float = jsonObject.getDouble("longitude").toFloat()
+                    val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
+                    val longitude: Float = jsonObject.getString("longitude").toFloat()
                     val sNum: Int = jsonObject.getInt("stopNum")
 
                     val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
@@ -111,16 +127,18 @@ class WTAApi {
         // Gets the stop information through the stop Number
         fun getStop(stopNum: Int) : StopObject? {
             val json = callAPI("https://api.ridewta.com/stops/$stopNum")
-            val jsonArray = JSONArray(json)
 
-            if (jsonArray == null) {
+
+            if (json == null) {
                 return null
             } else {
+                val jsonArray = JSONArray(json)
+
                 val jsonObject = jsonArray.getJSONObject(0)
-                val id = jsonObject.getInt("id")
+                val id = jsonObject.getString("id").toInt()
                 val name: String? = jsonObject.getString("name")
-                val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
-                val longitude: Float = jsonObject.getDouble("longitude").toFloat()
+                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
+                val longitude: Float = jsonObject.getString("longitude").toFloat()
                 val sNum: Int = jsonObject.getInt("stopNum")
 
                 val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
@@ -134,11 +152,13 @@ class WTAApi {
         // id = StopNum
         fun getStreet(id: Int): String {
             val json = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonArray = JSONArray(json)
 
-            if (jsonArray == null) {
+
+            if (json == null) {
                 return "N/A"
             } else {
+                val jsonArray = JSONArray(json)
+
                 val jsonObject: JSONObject = jsonArray.getJSONObject(0)
                 val street = jsonObject.getString("street")
                 Log.d("@@@@", street)
@@ -150,11 +170,12 @@ class WTAApi {
         // id = StopNum
         fun getLighting(id: Int): String {
             val json = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonArray = JSONArray(json)
 
-            if (jsonArray == null) {
+            if (json == null) {
                 return "N/A"
             } else {
+                val jsonArray = JSONArray(json)
+
                 val jsonObject: JSONObject = jsonArray.getJSONObject(0)
                 val light = jsonObject.getString("lighting")
                 Log.d("@@@@", light)
@@ -166,11 +187,13 @@ class WTAApi {
         // id = StopNum
         fun getShelter(id: Int): String {
             val json = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonArray = JSONArray(json)
 
-            if (jsonArray == null) {
+
+            if (json == null) {
                 return "N/A"
             } else {
+                val jsonArray = JSONArray(json)
+
                 val jsonObject: JSONObject = jsonArray.getJSONObject(0)
                 val shelter = jsonObject.getString("shelter")
                 Log.d("@@@@", shelter)
@@ -182,11 +205,12 @@ class WTAApi {
         // id = StopNum
         fun getBench(id: Int): String {
             val json = callAPI("https://api.ridewta.com/stops/$id")
-            val jsonArray = JSONArray(json)
 
-            if (jsonArray == null) {
+            if (json == null) {
                 return "N/A"
             } else {
+                val jsonArray = JSONArray(json)
+
                 val jsonObject: JSONObject = jsonArray.getJSONObject(0)
                 val bench = jsonObject.getString("bench")
                 Log.d("@@@@", bench)
@@ -199,11 +223,9 @@ class WTAApi {
         fun getPredictions(id: Int): List<Prediction>? {
             val predictionList = mutableListOf<Prediction>()
 
-            val url = URL("https://api.ridewta.com/stops/$id/predictions")
-            val connection = url.openConnection()
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0")
-            val content = connection.getInputStream().bufferedReader().readText()
-            val jsonObject = JSONObject(content)
+            val response = callAPI("https://api.ridewta.com/stops/$id/predictions") ?: return null
+
+            val jsonObject = JSONObject(response)
             val bustime = jsonObject.getJSONObject("bustime-response")
             val prd = bustime.getJSONArray("prd")
 
@@ -218,7 +240,7 @@ class WTAApi {
                 var j = 0
                 while (j < i) {
                     val pred = prd.getJSONObject(j)
-                    val route = pred.getString("rt")
+                    val route = pred.getString("des")
                     val time = pred.getString("prdtm")
 
                     val hr = time.substring(9,11)
@@ -236,19 +258,25 @@ class WTAApi {
 
         // Returns bulletins for a stop, if there are any
         // id = StopNum
-        fun getBulletins(id: Int): List<String> {
-            val bulls = mutableListOf<String>()
-            val noBulletins = "No current bulletins for this stop"
+        fun getBulletins(id: Int): List<ServiceBulletin> {
+            val bulls = mutableListOf<ServiceBulletin>()
 
             val json = callAPI("https://api.ridewta.com/stops/$id/bulletins")
-            val jsonArray = JSONArray(json)
 
-            if (jsonArray == null) {
-                bulls.add(noBulletins)
+
+            if (json == null) {
+                return emptyList()
             } else {
+                val jsonArray = JSONArray(json)
                 for (b in 0..<jsonArray.length()) {
                     val jsonObject: JSONObject = jsonArray.getJSONObject(b)
-                    val bulletin = jsonObject.getString("dtl")
+                    val bulletin = ServiceBulletin(
+                        subject = jsonObject.getString("sbj"),
+                        brief = jsonObject.getString("brf"),
+                        priority = jsonObject.getString("prty"),
+                        effect = jsonObject.getString("efct"),
+                        service = jsonObject.getJSONArray("srvc")
+                    )
                     bulls.add(bulletin)
                 }
             }
@@ -257,26 +285,28 @@ class WTAApi {
         }
 
         // Compiles/returns a list of PatternObjects for a given route for the database
-        // In progress; not currently usable
-        /* fun getPOs(route: String): List<PatternObject>? {
-            val poList = mutableListOf<PatternObject>()
-            val firstArray = callAPI("https://api.ridewta.com/routes/$route/patterns")
-            val secondArray = JSONArray(firstArray)
+        // In progress
+        fun getPOs(route: String): List<PatternObject>? {
+            val arrayStr = callAPI("https://api.ridewta.com/routes/$route/patterns")
 
-            if (secondArray == null) {
+            if (arrayStr == null) {
                 return null
             } else {
-                val routePattern : RoutePattern
-                val jsonObject: JSONObject = secondArray.getJSONObject(i)
-                val patternJSONArray : JSONArray = jsonObject.getJSONArray("pt")
+                val jsonArray = JSONArray(arrayStr)
+                val patternList = mutableListOf<PatternObject>()
 
-                for (j in (0..<patternJSONArray.length())) {
-                    val patternJSON = patternJSONArray.getJSONObject(j)
-                    val patternObject = getPattern(patternJSON)
-                    patternList.add(patternObject)
+                val jsonObject = jsonArray.getJSONObject(0)
+                val patternArray = jsonObject.getJSONArray("pt")
+
+                for (i in (0..<patternArray.length())) {
+                    val patternObject = patternArray.getJSONObject(i)
+                    val toAdd = getPattern(patternObject)
+                    patternList.add(toAdd)
                 }
+
+                return patternList
             }
-        } */
+        }
 
         // Gets a specific pattern from a JSON object that represents that pattern
         private fun getPattern(patternJSON : JSONObject) : PatternObject {
@@ -348,11 +378,11 @@ class WTAApi {
             val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
 
             val responseJson = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
-            val responseJsonArray = JSONArray(responseJson)
 
-            if (responseJsonArray == null) {
+            if (responseJson == null) {
                 return null
             } else {
+                val responseJsonArray = JSONArray(responseJson)
                 Log.d("@@API@@", "Received response")
                 for (i in (0..<responseJsonArray.length())) {
                     val routePattern : RoutePattern
@@ -383,12 +413,12 @@ class WTAApi {
         fun getRoutes(): List<Route>? {
             val routeList = mutableListOf<Route>()
             val response = callAPI("https://api.ridewta.com/routes")
-            val json = JSONObject(response)
-            val jsonArray = json.getJSONArray("routes")
 
-            if (jsonArray == null) {
+            if (response == null) {
                 return null
             } else {
+                val json = JSONObject(response)
+                val jsonArray = json.getJSONArray("routes")
                 for (i in (0..<jsonArray.length())) {
 
                     val jsonObject: JSONObject = jsonArray.getJSONObject(i)
@@ -407,6 +437,60 @@ class WTAApi {
 
             return routeList
 
+        }
+
+        fun getAllBulletins(): List<ServiceBulletin>{
+            val bulletinList = mutableListOf<ServiceBulletin>()
+
+            val response = callAPI("https://api.ridewta.com/servicebulletins")
+
+            if(response == null){
+                return emptyList()
+            }else{
+                val json = JSONObject(response)
+                val jsonArray = json.getJSONArray("bulletins")
+                for(i in (0..<jsonArray.length())){
+                    val jsonObject = jsonArray.getJSONObject(i)
+                    val subject = jsonObject.getString("sbj")
+                    val brief = jsonObject.getString("brf")
+                    val priority = jsonObject.getString("prty")
+                    val effect = jsonObject.getString("efct")
+                    val service = jsonObject.getJSONArray("srvc")
+
+                    val bulletin = ServiceBulletin(subject, brief, priority, effect, service)
+
+                    bulletinList.add(bulletin)
+                }
+
+                return bulletinList
+            }
+
+        }
+
+        fun getRouteBulletins(id: String): List<ServiceBulletin> {
+            val bulls = mutableListOf<ServiceBulletin>()
+
+            val json = callAPI("https://api.ridewta.com/routes/$id/bulletins")
+
+
+            if (json == null) {
+                return emptyList()
+            } else {
+                val jsonArray = JSONArray(json)
+                for (b in 0..<jsonArray.length()) {
+                    val jsonObject: JSONObject = jsonArray.getJSONObject(b)
+                    val bulletin = ServiceBulletin(
+                        subject = jsonObject.getString("sbj"),
+                        brief = jsonObject.getString("brf"),
+                        priority = jsonObject.getString("prty"),
+                        effect = jsonObject.getString("efct"),
+                        service = jsonObject.getJSONArray("srvc")
+                    )
+                    bulls.add(bulletin)
+                }
+            }
+
+            return bulls
         }
     }
 }

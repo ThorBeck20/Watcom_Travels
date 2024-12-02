@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,27 +42,31 @@ import kotlinx.coroutines.withContext
 
 
 @Composable
-fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.current)) {
+fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.current), route: Route?) {
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(true) {
+    LaunchedEffect(route) {
         withContext(Dispatchers.IO) {
             viewModel.getRoutes()
-            var route = Route(
-                routeNum = 1.toString(),
-                name = "Fairhaven&Downtown",
-                color = "#ff0000",
-                pattern = null
-            )
-            withContext(Dispatchers.Main) {
-                viewModel.displayRoute(route)
-                // TODO()
-                // viewModel.getStops()
+
+            if(route != null){
+                withContext(Dispatchers.Main) {
+                    viewModel.displayRoute(route)
+                    Log.d("TM @@@", "Displaying route: $route")
+                    // TODO()
+                    // viewModel.getStops()
+                    viewModel.loaded()
+                }
+            }else{
                 viewModel.loaded()
+                Log.d("TM @@@", "No route selected")
             }
+
         }
     }
+
+
 
     val cameraPositionState : CameraPositionState = rememberCameraPositionState {
         position = uiState.cameraPosition
@@ -166,6 +171,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
     }
 
 }
+
 
 fun resourceToScaledBitMap(@DrawableRes id: Int, size : Int = 10) : Bitmap? {
 //    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

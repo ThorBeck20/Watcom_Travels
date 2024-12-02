@@ -3,6 +3,9 @@ package com.example.watcomtravels
 import android.content.Context
 import android.content.res.Resources
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +48,14 @@ data class TransitUiState(
 class TransitViewModel(context: Context) : ViewModel() {
     private val _uiState = MutableStateFlow(TransitUiState(context))
     val uiState : StateFlow<TransitUiState> get() = _uiState
+
+    var selectedRoute by mutableStateOf<Route?>(null)
+        private set
+
+    fun updateSelectedRoute(route: Route) {
+        selectedRoute = route
+        Log.d("TVM @@@", "Selected route updated: $selectedRoute")
+    }
 
 
     /**

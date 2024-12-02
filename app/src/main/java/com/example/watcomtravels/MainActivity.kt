@@ -1,16 +1,18 @@
 package com.example.watcomtravels
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.Spinner
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,14 +27,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -43,9 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -60,7 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -71,12 +72,15 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.intellij.lang.annotations.JdkConstants.HorizontalAlignment
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 private lateinit var fusedLocationClient: FusedLocationProviderClient
 var showStopInfo by mutableStateOf<StopObject?>(null)
-val showRouteInfo by mutableStateOf<Route?>(null)
+var showRouteInfo by mutableStateOf<Route?>(null)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +112,7 @@ class MainActivity : ComponentActivity() {
             val transitViewModel = TransitViewModel(context = this@MainActivity)
             val uiState by transitViewModel.uiState.collectAsState()
 
-            val mapComposable = @Composable { TransitMap(transitViewModel) }
+            val mapComposable = @Composable { TransitMap(transitViewModel, transitViewModel.selectedRoute) }
             var location: LatLng? = null
 
             LaunchedEffect(true) {
@@ -129,9 +133,9 @@ class MainActivity : ComponentActivity() {
 
             } else {
                 if(nearbyStops != null){
-                    PortraitUI(mapComposable, nearbyStops, "Nearby stops")
+                    PortraitUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel)
                 }else{
-                    PortraitUI(mapComposable, defaultStops, "Popular stops")
+                    PortraitUI(mapComposable, defaultStops, "Popular stops", transitViewModel)
                 }
             }
 
@@ -201,9 +205,6 @@ class MainActivity : ComponentActivity() {
 
 
 }
-
-
-
 @Composable
 private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?): MutableList<StopObject>? {
 
@@ -225,7 +226,12 @@ private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList<StopObject>, stopType: String) {
+private fun PortraitUI(
+    mapComposable: @Composable () -> Unit,
+    stops: MutableList<StopObject>,
+    stopType: String,
+    transitViewModel: TransitViewModel
+) {
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -237,8 +243,9 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
         if (showStopInfo != null) {
             StopInfoPage(showStopInfo!!)
         } else if (showRouteInfo != null) {
-
+            RouteInfoPage(showRouteInfo!!, mapComposable)
         } else {
+            val scrollState = rememberScrollState()
             BottomSheetScaffold(
                 scaffoldState = scaffoldState,
                 sheetPeekHeight = 300.dp,
@@ -246,7 +253,9 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Row {
+                            Row(
+
+                            ) {
 
                                 TextField(
                                     value = searchText.value,
@@ -263,19 +272,37 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
 
                                 )
 
+
+
                             }
 
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+
+                                },
+                                content = {
+                                    Icon(
+                                        Icons.Filled.Menu,
+                                        "Menu",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            )
                         }
                     )
                 },
                 sheetContent = {
                     Column(
-                        Modifier.fillMaxWidth(),
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-
+                        RoutesMain(transitViewModel)
                         StopRow(stops, stopType)
-                        RoutesMain()
+                        BulletinsMain()
 
                     }
                 }
@@ -298,81 +325,56 @@ private fun PortraitUI(mapComposable: @Composable () -> Unit, stops: MutableList
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RoutesMain() {
-    val routes = remember { mutableStateListOf<Route>() }
-    var mExpanded by remember { mutableStateOf(false) }
-    var mSelectedText by remember { mutableStateOf("Select a route") }
+private fun LandscapeUI(mapComposable: @Composable () -> Unit, stops: MutableList<StopObject>?) {
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val fetchedRoutes = WTAApi.getRoutes()
-            Log.d("@@@", "Fetched Routes: ${fetchedRoutes?.size ?: 0}")
-            withContext(Dispatchers.Main) {
-                fetchedRoutes?.let { routes.addAll(it) }
-                Log.d("@@@", "Routes LOADED: ${routes.size}")
-            }
-        }
-    }
+    val searchText = rememberSaveable { mutableStateOf("") }
 
-    Column(
+    Row(
         modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth()
+            .fillMaxSize()
     ) {
-        Text(
-            "Routes",
-            fontSize = 32.sp,
-            textAlign = TextAlign.Left,
-            fontWeight = FontWeight.SemiBold
-        )
+        if (showStopInfo != null) {
+            StopInfoPage(showStopInfo!!)
+        } else if (showRouteInfo != null) {
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .wrapContentSize(Alignment.TopStart)
-        ) {
-            Text(
-                mSelectedText,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        mExpanded = true
-                        Log.d("@@@", "Dropdown Triggered")
-                    }
-                    .background(Color.LightGray)
-                    .padding(8.dp),
-                fontSize = 16.sp
-            )
+        } else {
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Row {
+                                TextField(
+                                    value = searchText.value,
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    onValueChange = {
+                                        searchText.value = it
+                                    },
+                                    placeholder = {
+                                        Text("Where to?")
+                                    },
+                                    shape = RoundedCornerShape(50.dp),
+                                    singleLine = true
 
-            DropdownMenu(
-                expanded = mExpanded,
-                onDismissRequest = { mExpanded = false },
-                modifier = Modifier.wrapContentHeight()
-            ) {
-                if (routes.isEmpty()) {
-                    DropdownMenuItem(
-                        text = { Text("No routes available") },
-                        onClick = {}
-                    )
-                } else {
-                    routes.forEach { route ->
-                        DropdownMenuItem(
-                            text = { Text(route.name) },
-                            onClick = {
-                                mSelectedText = route.name
-                                mExpanded = false
-                                Log.d("@@@", "Route Selected: ${route.name}")
+                                )
+
                             }
-                        )
-                    }
+                        }
+                    )
                 }
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier.padding(innerPadding)
+                ) {
+
+                }
+
             }
         }
     }
 }
-
 
 @Composable
 fun StopRow(stopList: MutableList<StopObject>, stopType: String) {
@@ -441,65 +443,14 @@ fun StopCard(stop: StopObject) {
 
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LandscapeUI(mapComposable: @Composable () -> Unit, stops: MutableList<StopObject>?) {
 
-    val searchText = rememberSaveable { mutableStateOf("") }
-
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        if (showStopInfo != null) {
-            StopInfoPage(showStopInfo!!)
-        } else if (showRouteInfo != null) {
-
-        } else {
-            Scaffold(
-                topBar = {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            Row {
-                                TextField(
-                                    value = searchText.value,
-                                    modifier = Modifier
-                                        .fillMaxWidth(),
-                                    onValueChange = {
-                                        searchText.value = it
-                                    },
-                                    placeholder = {
-                                        Text("Where to?")
-                                    },
-                                    shape = RoundedCornerShape(50.dp),
-                                    singleLine = true
-
-                                )
-
-                            }
-                        }
-                    )
-                }
-            ) { innerPadding ->
-                Box(
-                    modifier = Modifier.padding(innerPadding)
-                ) {
-
-                }
-
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StopInfoPage(stop: StopObject) {
 
     val scaffoldState = rememberBottomSheetScaffoldState()
 
-
+    val scrollState = rememberScrollState()
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         sheetPeekHeight = 256.dp,
@@ -528,11 +479,11 @@ fun StopInfoPage(stop: StopObject) {
                             showStopInfo = null
                         },
                         content = {
-                          Icon(
-                              Icons.AutoMirrored.Filled.ArrowBack,
-                              "Back",
-                              tint = MaterialTheme.colorScheme.primary
-                          )
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                "Back",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     )
                 },
@@ -546,7 +497,7 @@ fun StopInfoPage(stop: StopObject) {
                 ),
 
 
-            )
+                )
 
         },
         sheetContent = {
@@ -554,6 +505,7 @@ fun StopInfoPage(stop: StopObject) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp)
+                    .verticalScroll(scrollState)
             ) {
                 Text(
                     "Stop Information",
@@ -567,8 +519,163 @@ fun StopInfoPage(stop: StopObject) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(4.dp),
                     fontSize = 24.sp,
+                    )
 
+                Text(
+                    "Stop number: ${stop.stopNum}",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(4.dp),
+                    fontSize = 24.sp,
                 )
+
+
+                val predictions = remember { mutableStateListOf<Prediction>() }
+                LaunchedEffect(Unit) {
+                    withContext(Dispatchers.IO) {
+                        val fetchedPredictions = WTAApi.getPredictions(stop.stopNum)
+                        withContext(Dispatchers.Main) {
+                            fetchedPredictions?.let { predictions.addAll(it) }
+
+                        }
+                    }
+                }
+
+                Text(
+                    "Upcoming",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(4.dp)
+                )
+
+                for(prediction in predictions){
+
+                    Box(
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .fillMaxWidth()
+                            .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                            .padding(8.dp)
+                            .clickable(
+                                enabled = true,
+                                onClick = {
+                                        //showRouteInfo = route
+                                }
+                            )
+                    ){
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        ){
+                            Text(
+                                prediction.bus,
+                                textAlign = TextAlign.Left,
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .wrapContentWidth(Alignment.Start),
+                                fontSize = 24.sp,
+                            )
+                            Text(
+                                "${if (prediction.hour.toInt() > 12) (prediction.hour.toInt() - 12).toString() else prediction.hour
+                                }:${prediction.min}",
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .wrapContentWidth(Alignment.End),
+                                fontSize = 24.sp,
+                            )
+                        }
+
+                    }
+
+                    Spacer(
+                        modifier = Modifier
+                            .height(4.dp)
+                    )
+
+                }
+
+                val bulletins = remember { mutableStateListOf<ServiceBulletin>() }
+                LaunchedEffect(Unit) {
+                    withContext(Dispatchers.IO) {
+                        val fetchedBulletins = WTAApi.getBulletins(stop.stopNum)
+                        withContext(Dispatchers.Main) {
+                            fetchedBulletins.let { bulletins.addAll(it) }
+
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Service Bulletins",
+                        fontSize = 32.sp,
+                        textAlign = TextAlign.Left,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Column {
+                        if(bulletins.size == 0){
+                            Text(
+                                "No bulletins at this time",
+                                fontSize = 20.sp,
+                                textAlign = TextAlign.Left
+                            )
+                        }
+                        for (bulletin in bulletins) {
+                            Box(
+                                modifier = Modifier
+                                    .wrapContentHeight()
+                                    .fillMaxWidth()
+                                    .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                                    .padding(16.dp)
+                                    .clickable(
+                                        enabled = true,
+                                        onClick = {
+
+                                        }
+                                    )
+                            ){
+                                Column(){
+                                    Text(
+                                        "Priority: ${bulletin.priority}",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        "Subject: ${bulletin.subject}",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        "Effect: ${bulletin.effect}",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        bulletin.brief,
+                                        fontSize = 16.sp
+                                    )
+                                    Text(
+                                        "Services effected: ",
+                                        fontSize = 20.sp
+                                    )
+                                    DisplayServiceBulletinInfo(bulletin.service)
+                                }
+
+                            }
+                            Spacer(
+                                modifier = Modifier
+                                    .height(4.dp)
+                            )
+                        }
+                    }
+
+
+
+
+                }
             }
 
         }
@@ -577,6 +684,437 @@ fun StopInfoPage(stop: StopObject) {
 
     }
 }
+
+@Composable
+fun RoutesMain(transitViewModel: TransitViewModel) {
+    val routes = remember { mutableStateListOf<Route>() }
+    var mExpanded by remember { mutableStateOf(false) }
+    var mSelectedText by rememberSaveable { mutableStateOf(transitViewModel.selectedRoute?.name ?: "Select a route") }
+
+    LaunchedEffect(transitViewModel.selectedRoute) {
+        mSelectedText = transitViewModel.selectedRoute?.name ?: "Select a route"
+    }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val fetchedRoutes = WTAApi.getRoutes()
+            Log.d("@@@", "Fetched Routes: ${fetchedRoutes?.size ?: 0}")
+            withContext(Dispatchers.Main) {
+                fetchedRoutes?.let { routes.addAll(it) }
+                Log.d("@@@", "Routes LOADED: ${routes.size}")
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+    ) {
+        Text(
+            "Routes",
+            fontSize = 32.sp,
+            textAlign = TextAlign.Left,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .wrapContentSize(Alignment.TopStart)
+        ) {
+            Text(
+                mSelectedText,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        mExpanded = true
+                        Log.d("@@@", "Dropdown Triggered")
+                    }
+                    .background(Color.LightGray)
+                    .padding(8.dp),
+                fontSize = 20.sp
+            )
+
+            DropdownMenu(
+                expanded = mExpanded,
+                onDismissRequest = { mExpanded = false },
+                modifier = Modifier.wrapContentHeight()
+            ) {
+                if (routes.isEmpty()) {
+                    DropdownMenuItem(
+                        text = { Text("No routes available") },
+                        onClick = {}
+                    )
+                } else {
+                    routes.forEach { route ->
+                        DropdownMenuItem(
+                            text = { Text("${route.routeNum} ${route.name}", fontSize = 18.sp) },
+                            onClick = {
+                                mSelectedText = route.name
+                                transitViewModel.updateSelectedRoute(route)
+                                mExpanded = false
+                                Log.d("@@@", "Route Selected: ${route.name}")
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(
+            modifier = Modifier
+                .height(4.dp)
+        )
+
+        Box(
+            modifier = Modifier
+                .wrapContentHeight()
+                .fillMaxWidth()
+                .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                .padding(16.dp)
+                .clickable(
+                    enabled = true,
+                    onClick = {
+                        showRouteInfo = transitViewModel.selectedRoute
+                        Log.d("@@@", "Route info clicked!!")
+                    }
+                ),
+            contentAlignment = Alignment.Center,
+
+
+
+            ){
+
+                Text(
+                    "View Route Info",
+                    fontSize = 20.sp
+                )
+
+
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RouteInfoPage(route: Route, mapComposable: @Composable () -> Unit) {
+    val scaffoldState = rememberBottomSheetScaffoldState()
+
+    val scrollState = rememberScrollState()
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        sheetPeekHeight = 256.dp,
+        sheetShadowElevation = 24.dp,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+
+                    ){
+                        Text(
+                            "${route.routeNum} ${route.name}",
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            showRouteInfo = null
+                        },
+                        content = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                "Back",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                },
+                colors = TopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = Color.Black,
+                    navigationIconContentColor = Color.Transparent,
+                    scrolledContainerColor = Color.Transparent,
+                    actionIconContentColor = Color.Transparent
+
+                ),
+
+
+                )
+
+        },
+        sheetContent = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .verticalScroll(scrollState)
+            ) {
+                Text(
+                    "Route Information",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(4.dp)
+                )
+                Text(
+                    "${route.routeNum} ${route.name}",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(4.dp),
+                    fontSize = 24.sp,
+
+                    )
+
+                Spacer(
+                    Modifier.height(4.dp)
+                )
+
+                val context = LocalContext.current
+                val url = "https://schedules.ridewta.com/#route-details?routeNum=${route.routeNum}"
+                Box(
+
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .fillMaxWidth()
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(20)
+                        ).border(
+                            width = 2.dp, color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(20)
+                        )
+                        .padding(16.dp)
+                        .clickable(
+                            enabled = true,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                context.startActivity(intent)
+                            }
+                        )
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        Text(
+                            "View Route Schedule",
+                            fontSize = 20.sp,
+                            modifier = Modifier
+                                .wrapContentWidth(Alignment.Start)
+                        )
+
+                        Icon(
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            "Routes Link",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .wrapContentWidth(Alignment.End)
+                        )
+                    }
+                }
+
+                val bulletins = remember { mutableStateListOf<ServiceBulletin>() }
+                LaunchedEffect(Unit) {
+                    withContext(Dispatchers.IO) {
+                        val fetchedBulletins = WTAApi.getRouteBulletins(route.routeNum)
+                        withContext(Dispatchers.Main) {
+                            fetchedBulletins.let { bulletins.addAll(it) }
+
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text(
+                        "Service Bulletins",
+                        fontSize = 32.sp,
+                        textAlign = TextAlign.Left,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Column {
+                        if (bulletins.size == 0) {
+                            Text(
+                                "No bulletins at this time",
+                                fontSize = 20.sp,
+                                textAlign = TextAlign.Left
+                            )
+                        }
+                        for (bulletin in bulletins) {
+                            Box(
+                                modifier = Modifier
+                                    .wrapContentHeight()
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(20)
+                                    ).border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(20)
+                                    )
+                                    .padding(16.dp)
+                                    .clickable(
+                                        enabled = true,
+                                        onClick = {
+
+                                        }
+                                    )
+                            ) {
+                                Column() {
+                                    Text(
+                                        "Priority: ${bulletin.priority}",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        "Subject: ${bulletin.subject}",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        "Effect: ${bulletin.effect}",
+                                        fontSize = 20.sp
+                                    )
+                                    Text(
+                                        bulletin.brief,
+                                        fontSize = 16.sp
+                                    )
+
+                                }
+
+                            }
+                            Spacer(
+                                modifier = Modifier
+                                    .height(4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+        }
+    ) { innerPadding ->
+
+        //mapComposable.invoke()
+    }
+}
+
+@Composable
+fun BulletinsMain(){
+
+    val bulletins = remember { mutableStateListOf<ServiceBulletin>() }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val fetchedBulletins = WTAApi.getAllBulletins()
+            Log.d("@@@", "Fetched Bulletins: ${fetchedBulletins?.size ?: 0}")
+            withContext(Dispatchers.Main) {
+                fetchedBulletins?.let { bulletins.addAll(it) }
+                Log.d("@@@", "Bulletins LOADED: ${bulletins.size}")
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+    ) {
+        Text("Service Bulletins",
+            fontSize = 32.sp,
+            textAlign = TextAlign.Left,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Column {
+                if(bulletins.size == 0){
+                    Text(
+                        "No bulletins at this time",
+                        fontSize = 20.sp,
+                        textAlign = TextAlign.Left
+                    )
+                }
+                for (bulletin in bulletins) {
+                    Box(
+                        modifier = Modifier
+                            .wrapContentHeight()
+                            .fillMaxWidth()
+                            .background(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(20)).border(width = 2.dp, color= MaterialTheme.colorScheme.primaryContainer , shape = RoundedCornerShape(20))
+                            .padding(16.dp)
+                            .clickable(
+                                enabled = true,
+                                onClick = {
+
+                                }
+                            )
+                    ){
+                        Column(){
+                            Text(
+                                "Priority: ${bulletin.priority}",
+                                fontSize = 20.sp
+                            )
+                            Text(
+                                "Subject: ${bulletin.subject}",
+                                fontSize = 20.sp
+                            )
+                            Text(
+                                "Effect: ${bulletin.effect}",
+                                fontSize = 20.sp
+                            )
+                            Text(
+                                bulletin.brief,
+                                fontSize = 16.sp
+                            )
+                            Text(
+                                "Services effected: ",
+                                fontSize = 20.sp
+                            )
+                            DisplayServiceBulletinInfo(bulletin.service)
+                        }
+
+                    }
+                    Spacer(
+                        modifier = Modifier
+                        .height(4.dp)
+                    )
+                }
+        }
+
+
+
+
+    }
+
+}
+
+@Composable
+fun DisplayServiceBulletinInfo(service: JSONArray) {
+
+    val affectedServices = remember { mutableListOf<JSONObject>() }
+
+    for (i in 0..<service.length()){
+        affectedServices.add(service.getJSONObject(i))
+    }
+
+    for (item in affectedServices){
+        Text("Route: ${item.getString("rt")} ${item.getString("rtdir")}",
+            fontSize = 16.sp)
+    }
+}
+
+
 
 
 
