@@ -49,6 +49,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -90,6 +91,8 @@ var showStopInfo by mutableStateOf<StopObject?>(null)
 var showRouteInfo by mutableStateOf<Route?>(null)
 var showSettings by mutableStateOf(false)
 var showFavorites by mutableStateOf(false)
+
+var timeOption by mutableStateOf(false) // true = military, false = standard
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1286,7 +1289,58 @@ fun SettingsPage(){
                 )
 
         }
-    ) { innerpadding ->
+    ) { innerPadding ->
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+
+
+                Text(
+                    "Time Preference",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                Text(
+                    "Choose how stop arrival times are displayed",
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                RadioButton(
+                    selected = !timeOption,
+                    onClick = {
+                        timeOption = false
+                    })
+                Text("Standard Time")
+            }
+
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                RadioButton(
+                    selected = timeOption,
+                    onClick = {
+                        timeOption = true
+                    })
+                Text("Military Time")
+            }
+
+        }
 
     }
 }
@@ -1341,7 +1395,7 @@ fun FavoritesPage(){
 
         }
     ) { innerpadding ->
-
+        //TODO// --get favorite stops from DB
     }
 }
 
