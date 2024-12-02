@@ -3,6 +3,8 @@ package com.example.watcomtravels
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // All databases tested and functional as of testing
 
@@ -153,5 +155,65 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null
 
         cursor.close()
         return ret
+    }
+}
+
+//
+class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null, 1) {
+    override fun onCreate(db: SQLiteDatabase?) {
+        db?.execSQL("CREATE TABLE IF NOT EXISTS ROUTES(route TEXT, pid INT, line INT, direct TEXT)")
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase?, p1: Int, p2: Int) {
+        TODO("Not yet implemented")
+    }
+
+    // rt: routeNum for the associated RoutePattern
+    // rp: RoutePattern being added to the table
+    fun insertRoute(rt: String, rp: RoutePattern) {
+        writableDatabase.execSQL("INSERT INTO ROUTES(route, pid, line, direct)" +
+                "VALUES(\"$rt\", \"${rp.pid}\", \"${rp.lineNum}\", \"${rp.routeDir}\")")
+    }
+
+    // rt: routeNum
+    fun deleteRoute(rt: String) {
+        writableDatabase.execSQL("DELETE FROM ROUTES WHERE (route=\"$rt\")")
+    }
+
+    // rt: routeNum
+    fun getRoute(rt: String): RoutePattern {
+        val cursor = readableDatabase.rawQuery("SELECT * FROM ROUTES WHERE (route=\"$rt\")", null)
+        cursor.moveToFirst()
+
+        val p = cursor.getInt(1)
+        val l = cursor.getInt(2)
+        val d = cursor.getString(3)
+        val pt = mutableListOf<PatternObject>()
+        val ret = RoutePattern(p, l, d, pt)
+
+        cursor.close()
+        return ret
+    }
+
+    fun getAllRoutes(): List<RoutePattern> {
+        val ret = mutableListOf<RoutePattern>()
+
+        val cursor = readableDatabase.rawQuery("SELECT * FROM ROUTES", null)
+        while (cursor.moveToNext()) {
+            val p = cursor.getInt(2)
+            val l = cursor.getInt(3)
+            val d = cursor.getString(4)
+            val pt = mutableListOf<PatternObject>()
+            val route = RoutePattern(p, l, d, pt)
+            ret.add(route)
+        }
+
+        cursor.close()
+        return ret
+    }
+
+    // fetches routepattern lists for the routes
+    private fun fetchRPs(route: String){
+        //
     }
 }
