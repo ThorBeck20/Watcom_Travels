@@ -93,9 +93,8 @@ class MainActivity : ComponentActivity() {
             val currentLocation = 1
             val bham = LatLng(48.73, -122.49)
 
-            val favTrips = dbTrips(this)
-            val favStops = dbStops(this)
-            val recents = dbRecent(this)
+            val search = dbSearch(this)
+            search.clearSearch()
 
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
@@ -108,6 +107,19 @@ class MainActivity : ComponentActivity() {
 
                 }
             }
+
+            // testing work for ltlnSearch
+            /* val so1 = StopObject(1, "one", 48.754.toFloat(), (-122.464).toFloat(), 1)
+            val so2 = StopObject(2, "two", 48.784.toFloat(), (-122.444).toFloat(), 2)
+            val so3 = StopObject(3, "three", 40.toFloat(), 90.64.toFloat(), 3)
+            val so4 = StopObject(4, "four", 48.754.toFloat(), 0.toFloat(), 4)
+            search.insertSearch(so1)
+            search.insertSearch(so2)
+            search.insertSearch(so3)
+            search.insertSearch(so4)
+
+            val ts = search.ltlnSearch(48.75, -122.46)
+            Log.d("@@@@", "${ts.size}") */
 
             val transitViewModel = TransitViewModel(context = this@MainActivity)
             val uiState by transitViewModel.uiState.collectAsState()
