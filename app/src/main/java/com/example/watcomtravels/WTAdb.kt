@@ -3,6 +3,7 @@ package com.example.watcomtravels
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -156,6 +157,91 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null
     }
 }
 
+// Database of all stops - no size limit
+class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null, 1) {
+    override fun onCreate(db: SQLiteDatabase?) {
+        db?.execSQL("CREATE TABLE IF NOT EXISTS SEARCH(id INT, name TEXT, lat DOUBLE, lon DOUBLE, sn INT)")
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
+        TODO("Not yet implemented")
+    }
+
+    fun insertSearch(stop: StopObject) {
+        writableDatabase.execSQL("INSERT INTO SEARCH(id, name, lat, lon, sn)" +
+                "VALUES(\"${stop.id}\", \"${stop.name}\", \"${stop.lat}\", \"${stop.long}\", \"${stop.stopNum}\")")
+    }
+
+    fun deleteSearch(stop: StopObject) {
+        writableDatabase.execSQL("DELETE FROM SEARCH WHERE (id=\"${stop.id}\") OR (sn=\"${stop.stopNum}\")")
+    }
+
+    fun clearSearch() {
+        writableDatabase.execSQL("DELETE FROM SEARCH")
+    }
+
+    fun getSearch(stop: StopObject): StopObject {
+        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE" +
+                "(id=\"${stop.id}\") OR (sn=\"${stop.stopNum}\")", null)
+        cursor.moveToFirst()
+
+        val i = cursor.getInt(0)
+        val n = cursor.getString(1)
+        val lt = cursor.getDouble(2).toFloat()
+        val ln = cursor.getDouble(3).toFloat()
+        val s = cursor.getInt(4)
+        val ret = StopObject(i, n, lt, ln, s)
+
+        cursor.close()
+        return ret
+    }
+
+    // in progress, not currently functional
+    fun ltlnSearch(lati: Double, long: Double): List<StopObject> {
+        val ret = mutableListOf<StopObject>()
+
+        val srLat = lati - 0.04
+        val erLat = lati + 0.04
+        val srLon = long + 0.04
+        val erLon = long - 0.04
+
+        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE " +
+                "(lat BETWEEN ('$srLat') AND ('$erLat')) AND (lon BETWEEN ('$srLon') AND ('$erLon'))", null)
+
+        while (cursor.moveToNext()) {
+            val i = cursor.getInt(0)
+            val n = cursor.getString(1)
+            val lt = cursor.getDouble(2).toFloat()
+            val ln = cursor.getDouble(3).toFloat()
+            val s = cursor.getInt(4)
+            val stop = StopObject(i, n, lt, ln, s)
+            ret.add(stop)
+        }
+
+        cursor.close()
+        return ret
+    }
+
+    fun getAllSearches(): List<StopObject> {
+        val ret = mutableListOf<StopObject>()
+
+        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH", null)
+        while (cursor.moveToNext()) {
+            val id = cursor.getInt(0)
+            val name = cursor.getString(1)
+            val lat = cursor.getDouble(2).toFloat()
+            val lon = cursor.getDouble(3).toFloat()
+            val sn = cursor.getInt(4)
+
+            val stop = StopObject(id, name, lat, lon, sn)
+            ret.add(stop)
+        }
+
+        cursor.close()
+        return ret
+    }
+}
+
 // Database of RoutePattern objects - no size limit
 class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
@@ -176,6 +262,10 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
     // rt: routeNum
     fun deleteRoute(rt: String) {
         writableDatabase.execSQL("DELETE FROM ROUTES WHERE (route=\"$rt\")")
+    }
+
+    fun deleteAllRoutes() {
+        writableDatabase.execSQL("DELETE FROM ROUTES")
     }
 
     // rt: routeNum
@@ -211,7 +301,6 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
     }
 
     // fetches RoutePattern lists for the routes
-    // function calling must do so in IO thread
     private suspend fun fetchRPs(route: String): List<PatternObject>? {
         val rp : List<PatternObject>?
         withContext(Dispatchers.IO) {
