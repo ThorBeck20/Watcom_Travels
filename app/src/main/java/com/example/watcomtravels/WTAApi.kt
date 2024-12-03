@@ -1,14 +1,30 @@
 package com.example.watcomtravels
 
+import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.Log
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.model.RectangularBounds
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.api.net.SearchByTextRequest
+import com.google.maps.android.ktx.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.json.JSONStringer
 import java.io.FileNotFoundException
+import java.io.IOException
+import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Arrays
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
 
@@ -65,6 +81,7 @@ data class ServiceBulletin(
 
 // All functions in WTAApi must be called in an IO thread
 class WTAApi {
+
     companion object {
         // Handles getting the JSONArray for api work
         private fun callAPI(urlString: String): String? {
@@ -127,7 +144,6 @@ class WTAApi {
         // Gets the stop information through the stop Number
         fun getStop(stopNum: Int) : StopObject? {
             val json = callAPI("https://api.ridewta.com/stops/$stopNum")
-
 
             if (json == null) {
                 return null
@@ -491,6 +507,43 @@ class WTAApi {
             }
 
             return bulls
+        }
+
+        /**
+         * Calls the placesAPI
+         */
+        private fun callPlacesAPI(str: String) : String? {
+            var retStr : String
+            try {
+                // Specify what kind of things to return
+                val placeFields : List<Place.Field> = Arrays.asList(Place.Field.ID, Place.Field.DISPLAY_NAME)
+
+                // Lat Long bounds for the search
+                val swBound = LatLng(48.40004, -122.37137)
+                val neBound = LatLng(48.51422, -122.19048)
+
+                val searchByTextRequest = SearchByTextRequest.builder(str, placeFields)
+                    .setMaxResultCount(10)
+                    .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound)).build()
+
+
+            } catch (e : Exception) {
+                Log.d("@_@", "Error: $e")
+                return "??"
+            }
+            return ""
+        }
+
+
+        /**
+         * Test function for places API
+         */
+        fun getPlacesSearch(str: String) : String? {
+            var json : String
+            runBlocking {
+                json = callPlacesAPI(str).toString()
+            }
+            return json
         }
     }
 }

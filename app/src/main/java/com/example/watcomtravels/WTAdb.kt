@@ -7,6 +7,8 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+const val DISTANCE = 0.4
+
 // Class to store trip stops together
 data class TripSet (
     val first : Int,    // first stop of a trip
@@ -24,13 +26,13 @@ class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyTripsDb", null, 1
     }
 
     // Add trip to database
-    fun insertTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("INSERT INTO TRIPS(first, second) VALUES(\"$id1\", \"$id2\")")
+    fun insertTrip(sn1: Int, sn2: Int) {
+        writableDatabase.execSQL("INSERT INTO TRIPS(first, second) VALUES(\"$sn1\", \"$sn2\")")
     }
 
     // Delete trip from database
-    fun deleteTrip(id1: Int, id2: Int) {
-        writableDatabase.execSQL("DELETE FROM TRIPS WHERE (first=\"$id1\") AND (second=\"$id2\")")
+    fun deleteTrip(sn1: Int, sn2: Int) {
+        writableDatabase.execSQL("DELETE FROM TRIPS WHERE (first=\"$sn1\") AND (second=\"$sn2\")")
     }
 
     // Delete all trips from database
@@ -66,13 +68,13 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1
     }
 
     // Add stop to database
-    fun insertStop(id: Int) {
-        writableDatabase.execSQL("INSERT INTO STOPS(stop) VALUES(\"$id\")")
+    fun insertStop(sn: Int) {
+        writableDatabase.execSQL("INSERT INTO STOPS(stop) VALUES(\"$sn\")")
     }
 
     // Delete stop from database
-    fun deleteStop(id1: Int) {
-        writableDatabase.execSQL("DELETE FROM STOPS WHERE stop=\"$id1\"")
+    fun deleteStop(sn: Int) {
+        writableDatabase.execSQL("DELETE FROM STOPS WHERE stop=\"$sn\"")
     }
 
     // Delete all stops from database
@@ -108,8 +110,8 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null
     }
 
     // Add trip/stop to database
-    fun insertRecent(id1: Int, id2: Int) {
-        writableDatabase.execSQL("INSERT INTO RECENTS(first, second) VALUES(\"$id1\", \"$id2\")")
+    fun insertRecent(sn1: Int, sn2: Int) {
+        writableDatabase.execSQL("INSERT INTO RECENTS(first, second) VALUES(\"$sn1\", \"$sn2\")")
         val cursor = readableDatabase.rawQuery("SELECT COUNT(*) FROM RECENTS", null)
         cursor.moveToFirst()
         val tracker = cursor.getInt(0)
@@ -131,8 +133,8 @@ class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null
     }
 
     // Delete trip/stops from database
-    fun deleteRecent(id1: Int, id2: Int) {
-        writableDatabase.execSQL("DELETE FROM RECENTS WHERE (first=\"$id1\") AND (second=\"$id2\")")
+    fun deleteRecent(sn1: Int, sn2: Int) {
+        writableDatabase.execSQL("DELETE FROM RECENTS WHERE (first=\"$sn1\") AND (second=\"$sn2\")")
     }
 
     // Clears recent trips/stops history
@@ -167,22 +169,28 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
         TODO("Not yet implemented")
     }
 
+    // Add a StopObject to database
     fun insertSearch(stop: StopObject) {
+        val lt = (stop.lat).toDouble()
+        val ln = (stop.long).toDouble()
         writableDatabase.execSQL("INSERT INTO SEARCH(id, name, lat, lon, sn)" +
-                "VALUES(\"${stop.id}\", \"${stop.name}\", \"${stop.lat}\", \"${stop.long}\", \"${stop.stopNum}\")")
+                "VALUES(\"${stop.id}\", \"${stop.name}\", \"$lt\", \"$ln\", \"${stop.stopNum}\")")
     }
 
-    fun deleteSearch(stop: StopObject) {
-        writableDatabase.execSQL("DELETE FROM SEARCH WHERE (id=\"${stop.id}\") OR (sn=\"${stop.stopNum}\")")
+    // Delete a StopObject from database based on its StopNum
+    fun deleteSearch(sn: Int) {
+        writableDatabase.execSQL("DELETE FROM SEARCH WHERE (sn=\"$sn\")")
     }
 
+    // Clear all StopObjects in database
     fun clearSearch() {
         writableDatabase.execSQL("DELETE FROM SEARCH")
     }
 
-    fun getSearch(stop: StopObject): StopObject {
-        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE" +
-                "(id=\"${stop.id}\") OR (sn=\"${stop.stopNum}\")", null)
+    // Get a specific StopObject based on its StopNum
+    fun getSearch(sn: Int): StopObject {
+        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE + (sn=\"$sn\")",
+            null)
         cursor.moveToFirst()
 
         val i = cursor.getInt(0)
@@ -196,17 +204,17 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
         return ret
     }
 
-    // in progress, not currently functional
+    // Returns a list of StopObjects within a ~2mi radius of the passed location
     fun ltlnSearch(lati: Double, long: Double): List<StopObject> {
         val ret = mutableListOf<StopObject>()
 
-        val srLat = lati - 0.04
-        val erLat = lati + 0.04
-        val srLon = long + 0.04
-        val erLon = long - 0.04
+        val srLat = lati - DISTANCE
+        val erLat = lati + DISTANCE
+        val srLon = long - DISTANCE
+        val erLon = long + DISTANCE
 
         val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE " +
-                "(lat BETWEEN ('$srLat') AND ('$erLat')) AND (lon BETWEEN ('$srLon') AND ('$erLon'))", null)
+                "(lat BETWEEN $srLat AND $erLat) AND (lon BETWEEN $srLon AND $erLon)", null)
 
         while (cursor.moveToNext()) {
             val i = cursor.getInt(0)
@@ -222,6 +230,7 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
         return ret
     }
 
+    // Returns a list of all StopObjects in database
     fun getAllSearches(): List<StopObject> {
         val ret = mutableListOf<StopObject>()
 
@@ -243,6 +252,8 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
 }
 
 // Database of RoutePattern objects - no size limit
+// rt: routeNum for the associated RoutePattern
+// rp: RoutePattern being added to the table
 class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
         db?.execSQL("CREATE TABLE IF NOT EXISTS ROUTES(route TEXT, pid INT, line INT, direct TEXT)")
@@ -252,23 +263,23 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         TODO("Not yet implemented")
     }
 
-    // rt: routeNum for the associated RoutePattern
-    // rp: RoutePattern being added to the table
+    // Add a route to database
     fun insertRoute(rt: String, rp: RoutePattern) {
         writableDatabase.execSQL("INSERT INTO ROUTES(route, pid, line, direct)" +
                 "VALUES(\"$rt\", \"${rp.pid}\", \"${rp.lineNum}\", \"${rp.routeDir}\")")
     }
 
-    // rt: routeNum
+    // Delete a route from database
     fun deleteRoute(rt: String) {
         writableDatabase.execSQL("DELETE FROM ROUTES WHERE (route=\"$rt\")")
     }
 
+    // Delete all routes from database
     fun deleteAllRoutes() {
         writableDatabase.execSQL("DELETE FROM ROUTES")
     }
 
-    // rt: routeNum
+    // Get a route with the given routeNum
     fun getRoute(rt: String): RoutePattern {
         val cursor = readableDatabase.rawQuery("SELECT * FROM ROUTES WHERE (route=\"$rt\")", null)
         cursor.moveToFirst()
@@ -283,6 +294,7 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         return ret
     }
 
+    // Returns a list of all routes in database
     fun getAllRoutes(): List<RoutePattern> {
         val ret = mutableListOf<RoutePattern>()
 
