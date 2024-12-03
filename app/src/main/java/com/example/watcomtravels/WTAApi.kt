@@ -145,7 +145,6 @@ class WTAApi {
         fun getStop(stopNum: Int) : StopObject? {
             val json = callAPI("https://api.ridewta.com/stops/$stopNum")
 
-
             if (json == null) {
                 return null
             } else {
