@@ -50,7 +50,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
         withContext(Dispatchers.IO) {
             viewModel.getRoutes()
             var route = Route(
-                routeNum = 1,
+                routeNum = "1",
                 name = "Fairhaven&Downtown",
                 color = "#ff0000",
                 pattern = null
