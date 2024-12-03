@@ -71,10 +71,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.ui.text.google.fonts)
+//    implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.play.services.maps)
     implementation(libs.androidx.appcompat)
-    implementation(libs.places)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -86,11 +85,13 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
     implementation(libs.secrets.gradle.plugin)
+//    implementation(libs.kotlin.bom)
+    implementation("com.google.android.libraries.places:places:4.1.0")
 
 
 
     // Required -- JUnit 4 framework
-    testImplementation(libs.junit.junit)
+//    testImplementation(libs.junit.junit)
     // Optional -- Robolectric environment
     // testImplementation(libs.androidx.core)
     // Optional -- Mockito framework

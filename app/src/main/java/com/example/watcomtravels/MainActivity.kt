@@ -1,6 +1,7 @@
 package com.example.watcomtravels
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -77,7 +78,11 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.maps.android.compose.CameraPositionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -102,7 +107,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             var stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
             var loaded by remember { mutableStateOf(false) }
-            val currentLocation = 1
             val bham = LatLng(48.73, -122.49)
 
             val search = dbSearch(this)
@@ -110,6 +114,11 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 withContext(Dispatchers.IO) {
+                    val placesClient = getPlacesClient(this@MainActivity)
+                    val str = placesClient?.let { WTAApi.getPlacesSearch("Bellingham", it) }
+                    if (str != null) {
+                        Log.d("@@@",str)
+                    }
                     val fetchedStops = WTAApi.getStopObjects()
                     withContext(Dispatchers.Main){
                         fetchedStops?.let { stops.addAll(it) }
@@ -118,6 +127,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                 }
+
             }
 
             // testing work for ltlnSearch
@@ -136,12 +146,15 @@ class MainActivity : ComponentActivity() {
             val transitViewModel = TransitViewModel(context = this@MainActivity)
             val uiState by transitViewModel.uiState.collectAsState()
 
-            val mapComposable = @Composable { TransitMap(transitViewModel, transitViewModel.selectedRoute) }
+            val mapComposable = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
-
             LaunchedEffect(true) {
                 withContext(Dispatchers.IO){
                     location = getLastKnownLocation()
+                    val startingCameraPosition = location?.let { CameraPosition(it, 10f, 0f, 0f) }
+                    if (startingCameraPosition != null) {
+                        transitViewModel.updateCameraPosition(startingCameraPosition)
+                    }
                 }
             }
 
@@ -1409,6 +1422,23 @@ fun FavoritesPage(){
     ) { innerpadding ->
         //TODO// --get favorite stops from DB
     }
+}
+
+/**
+ * Gets places client
+ */
+fun getPlacesClient(context: Context) : PlacesClient? {
+    // Gets API key using secrets
+    val apikey = BuildConfig.GOOGLE_MAPS_API_KEY
+
+    // Checks if key is empty
+    if (apikey.isEmpty() || apikey == "DEFAULT_API_KEY") {
+        Log.e("Places API", "MISSING API KEY")
+    }
+
+    Places.initializeWithNewPlacesApiEnabled(context, apikey)
+    val placesClient = Places.createClient(context)
+    return placesClient
 }
 
 

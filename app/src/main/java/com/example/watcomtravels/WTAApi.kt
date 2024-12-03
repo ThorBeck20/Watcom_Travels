@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
@@ -25,6 +26,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Arrays
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
 
@@ -513,8 +516,9 @@ class WTAApi {
         /**
          * Calls the placesAPI
          */
-        private fun callPlacesAPI(str: String) : String? {
+        suspend fun callPlacesAPI(str: String, placesClient: PlacesClient) : String? {
             var retStr : String
+            var places : List<Place> = emptyList()
             try {
                 // Specify what kind of things to return
                 val placeFields : List<Place.Field> = Arrays.asList(Place.Field.ID, Place.Field.DISPLAY_NAME)
@@ -527,22 +531,30 @@ class WTAApi {
                     .setMaxResultCount(10)
                     .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound)).build()
 
-
+                // Actual search
+                return suspendCancellableCoroutine { cont ->
+                    placesClient.searchByText(searchByTextRequest)
+                        .addOnSuccessListener { response ->
+                            cont.resume(response.places.toString())
+                        }
+                        .addOnFailureListener { exception ->
+                            cont.resumeWithException(exception)
+                        }
+                }
             } catch (e : Exception) {
                 Log.d("@_@", "Error: $e")
                 return "??"
             }
-            return ""
         }
 
 
         /**
          * Test function for places API
          */
-        fun getPlacesSearch(str: String) : String? {
+        fun getPlacesSearch(str: String, placesClient: PlacesClient) : String? {
             var json : String
             runBlocking {
-                json = callPlacesAPI(str).toString()
+                json = callPlacesAPI(str, placesClient).toString()
             }
             return json
         }
