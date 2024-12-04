@@ -312,6 +312,15 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         return ret
     }
 
+    private fun stringRoute(rp: RoutePattern): String {
+        return "test"
+    }
+
+    private fun unstringRoute(rps: String): List<PatternObject> {
+        val rp = mutableListOf<PatternObject>()
+        return rp
+    }
+
     // fetches RoutePattern lists for the routes
     private suspend fun fetchRPs(route: String): List<PatternObject>? {
         val rp : List<PatternObject>?

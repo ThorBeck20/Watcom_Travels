@@ -25,7 +25,7 @@ import org.mockito.junit.MockitoJUnitRunner
 @RunWith(MockitoJUnitRunner::class)
 class ExampleUnitTest {
     @Mock
-    private lateinit var mockContext: MockedConstruction.Context
+    private lateinit var mockContext: Context    // MockedConstruction.Context
 
     // Tests for WTAApi
     @Test
@@ -59,5 +59,13 @@ class ExampleUnitTest {
         assertEquals(stop1538.lat, 48.74856.toFloat())
         assertEquals(stop1538.long, (-122.480826).toFloat())
         assertEquals(stop1538.stopNum, 3471)
+    }
+
+    // more API tests
+
+    // Tests for WTAdb
+    @Test
+    fun test_favTripsDB() {
+        val tester = dbTrips(mockContext)
     }
 }
