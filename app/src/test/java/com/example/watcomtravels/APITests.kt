@@ -14,7 +14,7 @@ class APITest {
     @Test
     fun test_getRoutePatterns() {
         var routePattern : MutableList<RoutePattern>? = mutableListOf<RoutePattern>()
-        routePattern = WTAApi.getRoutePatterns(1)?.toMutableList()
+        routePattern = WTAApi.getRoutePatterns("1")?.toMutableList()
 
         assert(routePattern != null)
 

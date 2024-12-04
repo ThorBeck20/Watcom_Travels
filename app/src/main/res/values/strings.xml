@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Watcom Travels</string>
+    <string name="title_activity_stop_info_page">StopInfoPage</string>
+    <string name="title_activity_route_info_page">RouteInfoPage</string>
 </resources>
