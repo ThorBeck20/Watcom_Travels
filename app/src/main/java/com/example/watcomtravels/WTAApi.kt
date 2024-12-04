@@ -467,13 +467,12 @@ class WTAApi {
 
                 val name = jsonObject.getString("routeName")
                 val color = jsonObject.getString("routeColor")
-                val pattern = getRoutePatterns(routeNum)
 
                 val route = Route(
                     routeNum = routeNum,
                     name = name,
                     color = color,
-                    pattern = pattern
+                    pattern = null
                 )
 
                 return route

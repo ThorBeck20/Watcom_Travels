@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -14,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,14 +24,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -200,9 +196,9 @@ class MainActivity : ComponentActivity() {
 
                     if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
                         if(nearbyStops != null){
-                            LandscapeUI(mapComposable, nearbyStops, drawerState)
+                            LandscapeUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
                         }else{
-                            LandscapeUI(mapComposable, defaultStops, drawerState)
+                            LandscapeUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
                         }
 
                     } else {
@@ -424,21 +420,50 @@ private fun PortraitUI(
 @Composable
 private fun LandscapeUI(
     mapComposable: @Composable () -> Unit,
-    stops: MutableList<StopObject>?,
+    stops: MutableList<StopObject>,
+    stopType: String,
+    transitViewModel: TransitViewModel,
     drawerState: DrawerState
 ) {
 
-    val searchText = rememberSaveable { mutableStateOf("") }
-
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
+    Column(
+        modifier = Modifier.fillMaxSize(),
     ) {
-            Scaffold(
+        val scope = rememberCoroutineScope()
+        val scaffoldState = rememberBottomSheetScaffoldState()
+        val searchText = rememberSaveable { mutableStateOf("") }
+
+
+        if (showSettings){
+            LaunchedEffect(Unit){
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+            SettingsPage()
+        }else if(showFavorites){
+            LaunchedEffect(Unit){
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+
+            FavoritesPage()
+        } else {
+
+            val scrollState = rememberScrollState()
+            BottomSheetScaffold(
+                scaffoldState = scaffoldState,
+                sheetPeekHeight = 100.dp,
+                sheetShadowElevation = 24.dp,
+                modifier = Modifier.fillMaxWidth(),
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Row {
+                            Row(
+
+                            ) {
+
                                 TextField(
                                     value = searchText.value,
                                     modifier = Modifier
@@ -454,19 +479,61 @@ private fun LandscapeUI(
 
                                 )
 
+
+
                             }
+
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        drawerState.open()
+                                    }
+                                },
+                                content = {
+                                    Icon(
+                                        Icons.Filled.Menu,
+                                        "Menu",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            )
                         }
                     )
+                },
+                sheetContent = {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        RoutesMain(transitViewModel)
+                        StopRow(stops, stopType)
+                        BulletinsMain()
+
+                    }
                 }
             ) { innerPadding ->
                 Box(
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
                 ) {
 
-                }
 
+                    mapComposable.invoke()
+
+                }
             }
+
+
+
         }
+
+    }
 
 }
 
@@ -689,7 +756,7 @@ fun BulletinsMain(){
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val fetchedBulletins = WTAApi.getAllBulletins()
-            Log.d("@@@", "Fetched Bulletins: ${fetchedBulletins.size ?: 0}")
+            Log.d("@@@", "Fetched Bulletins: ${fetchedBulletins.size}")
             withContext(Dispatchers.Main) {
                 fetchedBulletins.let { bulletins.addAll(it) }
                 Log.d("@@@", "Bulletins LOADED: ${bulletins.size}")

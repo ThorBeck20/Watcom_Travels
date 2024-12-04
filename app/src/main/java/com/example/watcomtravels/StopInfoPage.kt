@@ -1,5 +1,6 @@
 package com.example.watcomtravels
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -68,6 +69,13 @@ class StopInfoPage : ComponentActivity() {
 
 
         setContent {
+            var sheetPeekHeight = 256.dp
+            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                sheetPeekHeight = 100.dp
+            }else{
+                sheetPeekHeight = 256.dp
+            }
+
             var stop by remember { mutableStateOf<StopObject?>(null) }
 
             LaunchedEffect(Unit){
@@ -95,7 +103,7 @@ class StopInfoPage : ComponentActivity() {
                 val scrollState = rememberScrollState()
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
-                    sheetPeekHeight = 256.dp,
+                    sheetPeekHeight = sheetPeekHeight,
                     sheetShadowElevation = 24.dp,
                     topBar = {
                         CenterAlignedTopAppBar(
