@@ -71,7 +71,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-//    implementation(libs.androidx.ui.text.google.fonts)
+    implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.play.services.maps)
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
@@ -91,7 +91,7 @@ dependencies {
 
 
     // Required -- JUnit 4 framework
-//    testImplementation(libs.junit.junit)
+    testImplementation(libs.junit.junit)
     // Optional -- Robolectric environment
     // testImplementation(libs.androidx.core)
     // Optional -- Mockito framework

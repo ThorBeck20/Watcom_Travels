@@ -1,5 +1,8 @@
 package com.example.watcomtravels
 
+import android.content.Context
+import android.os.Parcel
+import android.os.Parcelable
 import android.util.Log
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.gms.maps.model.LatLng
@@ -7,6 +10,10 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.RectangularBounds
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
+import com.google.maps.android.ktx.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
@@ -14,6 +21,9 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.FileNotFoundException
+import java.io.IOException
+import java.io.Serializable
+import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Arrays
 import kotlin.coroutines.resume
@@ -448,6 +458,29 @@ class WTAApi {
 
             return routeList
 
+        }
+
+        // Gets the stop information through the route Number
+        fun getRoute(routeNum: String) : Route? {
+            val json = callAPI("https://api.ridewta.com/routes/$routeNum")
+
+            if (json == null) {
+                return null
+            } else {
+                val jsonObject = JSONObject(json)
+
+                val name = jsonObject.getString("routeName")
+                val color = jsonObject.getString("routeColor")
+
+                val route = Route(
+                    routeNum = routeNum,
+                    name = name,
+                    color = color,
+                    pattern = null
+                )
+
+                return route
+            }
         }
 
         fun getAllBulletins(): List<ServiceBulletin>{
