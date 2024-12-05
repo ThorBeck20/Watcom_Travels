@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -17,6 +16,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WatcomTravels"
         tools:targetApi="31">
+        <activity
+            android:name=".RouteInfoPage"
+            android:exported="false"
+            android:label="@string/title_activity_route_info_page"
+            android:theme="@style/Theme.WatcomTravels" />
+        <activity
+            android:name=".StopInfoPage"
+            android:exported="false"
+            android:label="@string/title_activity_stop_info_page"
+            android:theme="@style/Theme.WatcomTravels" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
