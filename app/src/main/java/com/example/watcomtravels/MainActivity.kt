@@ -595,6 +595,7 @@ fun StopCard(stop: StopObject) {
                     //showStopInfo = stop
                     val intent = Intent(context, StopInfoPage::class.java)
                     intent.putExtra("stopNum", stop.stopNum)
+                    intent.putExtra("time option", timeOption)
                     context.startActivity(intent)
                     Log.d("@@@", "stop clicked!!")
                 }

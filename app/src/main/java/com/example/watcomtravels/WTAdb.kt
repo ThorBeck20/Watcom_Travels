@@ -82,6 +82,14 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1
         writableDatabase.execSQL("DELETE FROM STOPS")
     }
 
+    fun findStop(sn: Int): Boolean {
+        val cursor = readableDatabase.rawQuery("SELECT * FROM STOPS WHERE stop=\"$sn\"", null)
+
+        return cursor.use {
+            it.moveToFirst() // Check if there's at least one result
+        }
+    }
+
     // Return all stops in database
     fun getAllStops(): List<Int> {
         val ret = mutableListOf<Int>()
@@ -95,6 +103,7 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1
         cursor.close()
         return ret
     }
+
 }
 
 // Database of recent stops/trips - max five
