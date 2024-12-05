@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
 
             // testing - fills the fav trips, fav stops, and all stops databases to test
             // the favourites setting
-            /* val test = dbTrips(this)
+            val test = dbTrips(this)
             val test2 = dbSearch(this)
             val test3 = dbStops(this)
             test.deleteAllTrips()
@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
             test.insertTrip(1, 3)
 
             test3.insertStop(3)
-            test3.insertStop(1) */
+            test3.insertStop(1)
 
             val transitViewModel = TransitViewModel(context = this@MainActivity)
             val uiState by transitViewModel.uiState.collectAsState()
