@@ -32,6 +32,11 @@ import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 
+/**
+ * TODO() - Get the Places SDK and use that to have the map be searchable?
+ */
+
+
 data class TransitUiState(
     val context : Context? = null,
     val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
@@ -149,7 +154,10 @@ class TransitViewModel(context: Context) : ViewModel() {
      * @param stop [StopObject]
      */
     fun addMarker(stop : StopObject) {
-        val imagePath = System.getProperty("user.dir")?.plus("app/src/main/res/drawable/busicon.jpg") ?: ""
+        /**
+         * TODO() : Figure out how the hell to get this bitmap to work without using context or
+         *          the file system, and not have to pass the resources
+         */
         val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
         val marker = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
@@ -169,8 +177,6 @@ class TransitViewModel(context: Context) : ViewModel() {
      * @param latLng [LatLng]
      */
     fun addMarker(latLng: LatLng) {
-        val imagePath = Paths.get("app", "src", "main", "res", "drawable", "busicon.jpg").toAbsolutePath().toString()
-        //.plus("app/src/main/res/drawable/busicon.jpg") ?: ""
         val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
         val marker = MarkerState(latLng)
