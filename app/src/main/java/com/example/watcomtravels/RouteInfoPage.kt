@@ -1,6 +1,7 @@
 package com.example.watcomtravels
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -70,6 +71,12 @@ class RouteInfoPage : ComponentActivity() {
         }
 
         setContent {
+            var sheetPeekHeight = 256.dp
+            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                sheetPeekHeight = 100.dp
+            }else{
+                sheetPeekHeight = 256.dp
+            }
             var route by remember { mutableStateOf<Route?>(null) }
 
             LaunchedEffect(Unit) {
@@ -94,14 +101,10 @@ class RouteInfoPage : ComponentActivity() {
             }else{
                 val scaffoldState = rememberBottomSheetScaffoldState()
 
-                val transitViewModel = TransitViewModel(this@RouteInfoPage)
-                transitViewModel.updateSelectedRoute(route!!)
-                val mapComposable = @Composable { TransitMap(transitViewModel, transitViewModel.selectedRoute) }
-
                 val scrollState = rememberScrollState()
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
-                    sheetPeekHeight = 256.dp,
+                    sheetPeekHeight = sheetPeekHeight,
                     sheetShadowElevation = 24.dp,
                     topBar = {
                         CenterAlignedTopAppBar(
@@ -308,7 +311,33 @@ class RouteInfoPage : ComponentActivity() {
                     }
                 ) { innerPadding ->
 
-                    mapComposable.invoke()
+                    LaunchedEffect(Unit) {
+                        withContext(Dispatchers.IO) {
+                            val fetchedPattern = WTAApi.getRoutePatterns(route!!.routeNum)!!
+                            withContext(Dispatchers.Main) {
+                                Log.d("@@Stop Info Page@@", "Fetched the route pattern")
+                                route!!.pattern = fetchedPattern
+                            }
+                        }
+                    }
+
+                    if(route!!.pattern == null){
+                        Box(
+                            modifier = Modifier.fillMaxSize()
+                        ){
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    }else{
+                        val transitViewModel = TransitViewModel(this@RouteInfoPage)
+                        transitViewModel.updateSelectedRoute(route!!)
+                        val mapComposable = @Composable { TransitMap(transitViewModel, transitViewModel.selectedRoute) }
+
+                        mapComposable.invoke()
+                    }
+
+
                 }
             }
         }

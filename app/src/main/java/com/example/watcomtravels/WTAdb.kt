@@ -82,6 +82,14 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1
         writableDatabase.execSQL("DELETE FROM STOPS")
     }
 
+    fun findStop(sn: Int): Boolean {
+        val cursor = readableDatabase.rawQuery("SELECT * FROM STOPS WHERE stop=\"$sn\"", null)
+
+        return cursor.use {
+            it.moveToFirst() // Check if there's at least one result
+        }
+    }
+
     // Return all stops in database
     fun getAllStops(): List<Int> {
         val ret = mutableListOf<Int>()
@@ -95,68 +103,7 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1
         cursor.close()
         return ret
     }
-}
 
-// Database of recent stops/trips - max five
-// If saving a stop, second id set to -1
-// Note: most recent entry will be bottom of the database
-class dbRecent(context: Context) : SQLiteOpenHelper(context, "MyRecentsDb", null, 1) {
-    override fun onCreate(db: SQLiteDatabase?) {
-        db?.execSQL("CREATE TABLE IF NOT EXISTS RECENTS(first INT, second INT)")
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        TODO("Not yet implemented")
-    }
-
-    // Add trip/stop to database
-    fun insertRecent(sn1: Int, sn2: Int) {
-        writableDatabase.execSQL("INSERT INTO RECENTS(first, second) VALUES(\"$sn1\", \"$sn2\")")
-        val cursor = readableDatabase.rawQuery("SELECT COUNT(*) FROM RECENTS", null)
-        cursor.moveToFirst()
-        val tracker = cursor.getInt(0)
-
-        // Updates database to most recent 5 trips/stops
-        if (tracker == 6) {
-            val hold = getAllRecents()
-            clearRecents()
-
-            var i = 1
-            while (i < tracker) {
-                val trn = hold[i]
-                insertRecent(trn.first, trn.second)
-                i++
-            }
-        }
-
-        cursor.close()
-    }
-
-    // Delete trip/stops from database
-    fun deleteRecent(sn1: Int, sn2: Int) {
-        writableDatabase.execSQL("DELETE FROM RECENTS WHERE (first=\"$sn1\") AND (second=\"$sn2\")")
-    }
-
-    // Clears recent trips/stops history
-    fun clearRecents() {
-        writableDatabase.execSQL("DELETE FROM RECENTS")
-    }
-
-    // Return all trips/stops in database
-    fun getAllRecents(): List<TripSet> {
-        val ret = mutableListOf<TripSet>()
-
-        val cursor = readableDatabase.rawQuery("SELECT * FROM RECENTS", null)
-        while (cursor.moveToNext()) {
-            val fir = cursor.getInt(0)
-            val sec = cursor.getInt(1)
-            val trip = TripSet(fir, sec)
-            ret.add(trip)
-        }
-
-        cursor.close()
-        return ret
-    }
 }
 
 // Database of all stops - no size limit
@@ -256,7 +203,7 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
 // rp: RoutePattern being added to the table
 class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
-        db?.execSQL("CREATE TABLE IF NOT EXISTS ROUTES(route TEXT, pid INT, line INT, direct TEXT)")
+        db?.execSQL("CREATE TABLE IF NOT EXISTS ROUTES(route TEXT, pid INT, line INT, direct TEXT, po TEXT)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, p1: Int, p2: Int) {
@@ -265,8 +212,9 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
 
     // Add a route to database
     fun insertRoute(rt: String, rp: RoutePattern) {
-        writableDatabase.execSQL("INSERT INTO ROUTES(route, pid, line, direct)" +
-                "VALUES(\"$rt\", \"${rp.pid}\", \"${rp.lineNum}\", \"${rp.routeDir}\")")
+        val po = stringRoute(rp)
+        writableDatabase.execSQL("INSERT INTO ROUTES(route, pid, line, direct, po)" +
+                "VALUES(\"$rt\", \"${rp.pid}\", \"${rp.lineNum}\", \"${rp.routeDir}\", \"$po\")")
     }
 
     // Delete a route from database
@@ -287,8 +235,9 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         val p = cursor.getInt(1)
         val l = cursor.getInt(2)
         val d = cursor.getString(3)
-        val pt = mutableListOf<PatternObject>()
-        val ret = RoutePattern(p, l, d, pt)
+        val pt = cursor.getString(4)
+        val po = unstringRoute(pt)
+        val ret = RoutePattern(p, l, d, po)
 
         cursor.close()
         return ret
@@ -303,8 +252,9 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
             val p = cursor.getInt(2)
             val l = cursor.getInt(3)
             val d = cursor.getString(4)
-            val pt = mutableListOf<PatternObject>()
-            val route = RoutePattern(p, l, d, pt)
+            val pt = cursor.getString(4)
+            val po = unstringRoute(pt)
+            val route = RoutePattern(p, l, d, po)
             ret.add(route)
         }
 
@@ -312,21 +262,46 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         return ret
     }
 
+    // makes a long string of all the latlon variables in a given
+    // RoutePattern's list of PatternObjects
     private fun stringRoute(rp: RoutePattern): String {
-        return "test"
-    }
+        val pobjs = rp.pt
+        var ret = ""
 
-    private fun unstringRoute(rps: String): List<PatternObject> {
-        val rp = mutableListOf<PatternObject>()
-        return rp
-    }
+        var i = pobjs.size - 1
+        while (i > -1) {
+            val lt = pobjs[i].lat
+            val ln = pobjs[i].long
 
-    // fetches RoutePattern lists for the routes
-    private suspend fun fetchRPs(route: String): List<PatternObject>? {
-        val rp : List<PatternObject>?
-        withContext(Dispatchers.IO) {
-            rp = WTAApi.getPOs(route)
+            ret = "$lt:$ln|$ret"
+            i--
         }
+
+        return ret
+    }
+
+    // returns a list of PatternObjects
+    // ONLY THE LAT LON VARIABLES ARE PROPERLY INITIALIZED
+    private fun unstringRoute(rps: String): MutableList<PatternObject> {
+        val rp = mutableListOf<PatternObject>()
+        var counter = 0
+        var lt = 0f
+        var ln = 0f
+
+        for (i in rps.indices) {
+            if (rps[i] == ':') {
+                lt = rps.substring((i-counter), i).toFloat()
+                counter = 0
+            } else if (rps[i] == '|') {
+                ln = rps.substring((i-counter), i).toFloat()
+                val po = PatternObject(0, lt, ln, "n/a", 0, null)
+                rp.add(po)
+                counter = 0
+            } else {
+                counter++
+            }
+        }
+
         return rp
     }
 }

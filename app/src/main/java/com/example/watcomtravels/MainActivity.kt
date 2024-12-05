@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -14,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,14 +24,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -106,38 +102,35 @@ class MainActivity : ComponentActivity() {
             val currentLocation = 1
             val bham = LatLng(48.73, -122.49)
 
-            LaunchedEffect(Unit) {
-                withContext(Dispatchers.IO) {
-                    val fetchedStops = WTAApi.getStopObjects()
-                    withContext(Dispatchers.Main){
-                        fetchedStops?.let { stops.addAll(it) }
-                        loaded = true
-                        Log.d("@@@", "STOPS LOADED: ${stops.size}")
-                    }
+            val allStops = dbSearch(this)
+            val apiBool = allStops.getAllSearches().isEmpty()
 
+            // testing
+            val test = dbRoutes(this)
+            test.deleteAllRoutes()
+
+            LaunchedEffect(Unit) {
+                if (apiBool) {
+                    withContext(Dispatchers.IO) {
+                        val fetchedStops = WTAApi.getStopObjects()
+                        withContext(Dispatchers.Main){
+                            fetchedStops?.let { stops.addAll(it) }
+                            loaded = true
+                            Log.d("@@@", "STOPS LOADED: ${stops.size}")
+
+                            for (i in 0..<stops.size) {
+                                allStops.insertSearch(stops[i])
+                            }
+                        }
+
+                    }
+                } else {
+                    val fetchedStops = allStops.getAllSearches()
+                    fetchedStops.let { stops.addAll(it) }
+                    loaded = true
+                    Log.d("@@@", "STOPS LOADED: ${stops.size}")
                 }
             }
-
-            // testing - fills the fav trips, fav stops, and all stops databases to test
-            // the favourites setting
-            /* val test = dbTrips(this)
-            val test2 = dbSearch(this)
-            val test3 = dbStops(this)
-            test.deleteAllTrips()
-            test2.clearSearch()
-            test3.deleteAllStops()
-
-            test2.insertSearch(StopObject(1, "First", 0f, 0f, 1))
-            test2.insertSearch(StopObject(2, "Second", 0f, 0f, 2))
-            test2.insertSearch(StopObject(3, "Third", 0f, 0f, 3))
-            test2.insertSearch(StopObject(4, "Fourth", 0f, 0f, 4))
-
-            test.insertTrip(1, 2)
-            test.insertTrip(3,4)
-            test.insertTrip(1, 3)
-
-            test3.insertStop(3)
-            test3.insertStop(1) */
 
             val transitViewModel = TransitViewModel(context = this@MainActivity)
             val uiState by transitViewModel.uiState.collectAsState()
@@ -200,9 +193,9 @@ class MainActivity : ComponentActivity() {
 
                     if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
                         if(nearbyStops != null){
-                            LandscapeUI(mapComposable, nearbyStops, drawerState)
+                            LandscapeUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
                         }else{
-                            LandscapeUI(mapComposable, defaultStops, drawerState)
+                            LandscapeUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
                         }
 
                     } else {
@@ -424,21 +417,50 @@ private fun PortraitUI(
 @Composable
 private fun LandscapeUI(
     mapComposable: @Composable () -> Unit,
-    stops: MutableList<StopObject>?,
+    stops: MutableList<StopObject>,
+    stopType: String,
+    transitViewModel: TransitViewModel,
     drawerState: DrawerState
 ) {
 
-    val searchText = rememberSaveable { mutableStateOf("") }
-
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
+    Column(
+        modifier = Modifier.fillMaxSize(),
     ) {
-            Scaffold(
+        val scope = rememberCoroutineScope()
+        val scaffoldState = rememberBottomSheetScaffoldState()
+        val searchText = rememberSaveable { mutableStateOf("") }
+
+
+        if (showSettings){
+            LaunchedEffect(Unit){
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+            SettingsPage()
+        }else if(showFavorites){
+            LaunchedEffect(Unit){
+                scope.launch {
+                    drawerState.close()
+                }
+            }
+
+            FavoritesPage()
+        } else {
+
+            val scrollState = rememberScrollState()
+            BottomSheetScaffold(
+                scaffoldState = scaffoldState,
+                sheetPeekHeight = 100.dp,
+                sheetShadowElevation = 24.dp,
+                modifier = Modifier.fillMaxWidth(),
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Row {
+                            Row(
+
+                            ) {
+
                                 TextField(
                                     value = searchText.value,
                                     modifier = Modifier
@@ -454,19 +476,61 @@ private fun LandscapeUI(
 
                                 )
 
+
+
                             }
+
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        drawerState.open()
+                                    }
+                                },
+                                content = {
+                                    Icon(
+                                        Icons.Filled.Menu,
+                                        "Menu",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            )
                         }
                     )
+                },
+                sheetContent = {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        RoutesMain(transitViewModel)
+                        StopRow(stops, stopType)
+                        BulletinsMain()
+
+                    }
                 }
             ) { innerPadding ->
                 Box(
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
                 ) {
 
-                }
 
+                    mapComposable.invoke()
+
+                }
             }
+
+
+
         }
+
+    }
 
 }
 
@@ -528,6 +592,7 @@ fun StopCard(stop: StopObject) {
                     //showStopInfo = stop
                     val intent = Intent(context, StopInfoPage::class.java)
                     intent.putExtra("stopNum", stop.stopNum)
+                    intent.putExtra("time option", timeOption)
                     context.startActivity(intent)
                     Log.d("@@@", "stop clicked!!")
                 }
@@ -689,7 +754,7 @@ fun BulletinsMain(){
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val fetchedBulletins = WTAApi.getAllBulletins()
-            Log.d("@@@", "Fetched Bulletins: ${fetchedBulletins.size ?: 0}")
+            Log.d("@@@", "Fetched Bulletins: ${fetchedBulletins.size}")
             withContext(Dispatchers.Main) {
                 fetchedBulletins.let { bulletins.addAll(it) }
                 Log.d("@@@", "Bulletins LOADED: ${bulletins.size}")
@@ -959,113 +1024,104 @@ fun FavoritesPage(){
             val trips = tripDB.getAllTrips()
             val stops = stopDB.getAllStops()
 
-            Text (
-                "Favorite Trips",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 32.sp,
-                modifier = Modifier.padding(8.dp)
-            )
+            Log.d("@@@@", "${trips.size} - ${stops.size}")
 
-            LazyColumn() {
-                items(trips.size) { index ->
-                    Row() {
-                        val s1 = searchDB.getSearch(trips[index].first)
-                        val s2 = searchDB.getSearch(trips[index].second)
+            if (trips.isNotEmpty()) {
+                Text (
+                    "Favorite Trips",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
 
-                        Text (
-                            "${s1.name}, Stop ${s1.stopNum}",
-                            fontSize = 16.sp,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                LazyColumn() {
+                    items(trips.size) { index ->
+                        Row() {
+                            val s1 = searchDB.getSearch(trips[index].first)
+                            val s2 = searchDB.getSearch(trips[index].second)
 
-                        Text (
-                            "-->",
-                            fontSize = 20.sp,
-                            modifier = Modifier.padding(12.dp)
-                        )
-
-                        Text (
-                            "${s2.name}, Stop ${s2.stopNum}",
-                            fontSize = 16.sp,
-                            modifier = Modifier.padding(12.dp)
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Button (
-                            onClick = {
-                                tripDB.deleteTrip(trips[index].first, trips[index].second)
-                            }
-                        ) {
                             Text (
-                                "Remove trip",
-                                fontSize = 10.sp
+                                "${s1.name}, Stop ${s1.stopNum}",
+                                fontSize = 16.sp,
+                                modifier = Modifier.padding(16.dp)
                             )
+
+                            Text (
+                                "-->",
+                                fontSize = 20.sp,
+                                modifier = Modifier.padding(12.dp)
+                            )
+
+                            Text (
+                                "${s2.name}, Stop ${s2.stopNum}",
+                                fontSize = 16.sp,
+                                modifier = Modifier.padding(12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Button (
+                                onClick = {
+                                    tripDB.deleteTrip(trips[index].first, trips[index].second)
+                                }
+                            ) {
+                                Text (
+                                    "Remove trip",
+                                    fontSize = 10.sp
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Text (
-                "Favorite Stops",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 32.sp,
-                modifier = Modifier.padding(8.dp)
-            )
+            if (stops.isNotEmpty()) {
+                Text (
+                    "Favorite Stops",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
 
-            LazyColumn() {
-                items(stops.size) { index ->
-                    Row() {
-                        val s1 = searchDB.getSearch(stops[index])
+                LazyColumn() {
+                    items(stops.size) { index ->
+                        Row() {
+                            val s1 = searchDB.getSearch(stops[index])
 
-                        Text (
-                            "${s1.name}, Stop ${s1.stopNum}",
-                            fontSize = 16.sp,
-                            modifier = Modifier.padding(16.dp)
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        Button (
-                            onClick = {
-                                stopDB.deleteStop(stops[index])
-                            }
-                        ) {
                             Text (
-                                "Remove stop",
-                                fontSize = 10.sp
+                                "${s1.name}, Stop ${s1.stopNum}",
+                                fontSize = 16.sp,
+                                modifier = Modifier.padding(16.dp)
                             )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            Button (
+                                onClick = {
+                                    stopDB.deleteStop(stops[index])
+                                }
+                            ) {
+                                Text (
+                                    "Remove stop",
+                                    fontSize = 10.sp
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxSize().padding(8.dp)
+            Button (
+                onClick = {
+                    //TODO: Ability to add to favourite trips
+                },
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Button (
-                    onClick = {
-                        //TODO: Ability to add to favourite trips
-                    }
-                ) {
-                    Text (
-                        "Add trip"
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Button (
-                    onClick = {
-                        //TODO: Ability to add to favourite stops
-                    }
-                ) {
-                    Text (
-                        "Add stop"
-                    )
-                }
+                Text (
+                    "Add trip"
+                )
             }
         }
     }

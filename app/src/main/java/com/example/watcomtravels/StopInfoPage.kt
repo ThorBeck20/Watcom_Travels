@@ -1,5 +1,6 @@
 package com.example.watcomtravels
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -25,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,14 +64,27 @@ class StopInfoPage : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val stopNum = intent.getIntExtra("stopNum", 0)
+        val timeOpt = intent.getBooleanExtra("time option", false)
         if(stopNum == 0){
             Log.d("@@Stop Info Page@@", "Error getting stopNum information")
             finish()
         }
 
-
+        val timeAdj: Int
+        timeAdj = if(timeOpt){
+            0 //military time
+        }else{
+            12
+        }
 
         setContent {
+            var sheetPeekHeight = 256.dp
+            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                sheetPeekHeight = 100.dp
+            }else{
+                sheetPeekHeight = 256.dp
+            }
+
             var stop by remember { mutableStateOf<StopObject?>(null) }
 
             LaunchedEffect(Unit){
@@ -95,7 +112,7 @@ class StopInfoPage : ComponentActivity() {
                 val scrollState = rememberScrollState()
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
-                    sheetPeekHeight = 256.dp,
+                    sheetPeekHeight = sheetPeekHeight,
                     sheetShadowElevation = 24.dp,
                     topBar = {
                         CenterAlignedTopAppBar(
@@ -110,6 +127,32 @@ class StopInfoPage : ComponentActivity() {
                                         stop!!.name!!,
                                         textAlign = TextAlign.Center,
                                         fontWeight = FontWeight.SemiBold
+                                    )
+                                    val stopDB = dbStops(this@StopInfoPage)
+
+                                    var favorited by rememberSaveable() { mutableStateOf(false) }
+                                    favorited = stopDB.findStop(stopNum)
+
+                                    IconButton(
+                                        onClick = {
+
+                                            if(!favorited){
+                                                favorited = true
+                                                Log.d("@@Stop Info Page@@", "Page added to favorites")
+                                                stopDB.insertStop(stopNum)
+                                            }else{
+                                                favorited = false
+                                                Log.d("@@Stop Info Page@@", "Page removed from favorites")
+                                                stopDB.deleteStop(stopNum)
+                                            }
+                                        },
+                                        content = {
+                                            Icon(
+                                                imageVector = if (favorited) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                                "Favorite",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     )
                                 }
 
@@ -209,7 +252,7 @@ class StopInfoPage : ComponentActivity() {
                                         .clickable(
                                             enabled = true,
                                             onClick = {
-                                                //showRouteInfo = route
+
                                             }
                                         )
                                 ){
@@ -227,8 +270,7 @@ class StopInfoPage : ComponentActivity() {
                                             fontSize = 24.sp,
                                         )
                                         Text(
-                                            "${if (prediction.hour.toInt() > 12) (prediction.hour.toInt() - 12).toString() else prediction.hour
-                                            }:${prediction.min}",
+                                            "${(prediction.hour.toInt() - timeAdj)}:${prediction.min}",
                                             textAlign = TextAlign.Center,
                                             modifier = Modifier
                                                 .padding(4.dp)
