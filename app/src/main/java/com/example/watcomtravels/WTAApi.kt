@@ -301,30 +301,6 @@ class WTAApi {
             return bulls
         }
 
-        // Compiles/returns a list of PatternObjects for a given route for the database
-        // In progress
-        fun getPOs(route: String): List<PatternObject>? {
-            val arrayStr = callAPI("https://api.ridewta.com/routes/$route/patterns")
-
-            if (arrayStr == null) {
-                return null
-            } else {
-                val jsonArray = JSONArray(arrayStr)
-                val patternList = mutableListOf<PatternObject>()
-
-                val jsonObject = jsonArray.getJSONObject(0)
-                val patternArray = jsonObject.getJSONArray("pt")
-
-                for (i in (0..<patternArray.length())) {
-                    val patternObject = patternArray.getJSONObject(i)
-                    val toAdd = getPattern(patternObject)
-                    patternList.add(toAdd)
-                }
-
-                return patternList
-            }
-        }
-
         // Gets a specific pattern from a JSON object that represents that pattern
         private fun getPattern(patternJSON : JSONObject) : PatternObject {
             val sequenceNum : Int = patternJSON.getInt("seq")
