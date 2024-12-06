@@ -9,12 +9,14 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import android.widget.ToggleButton
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,6 +55,7 @@ import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldColors
@@ -79,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import com.example.watcomtravels.ui.theme.AppTheme
+import com.example.watcomtravels.ui.theme.typography
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
@@ -99,14 +103,19 @@ var showSettings by mutableStateOf(false)
 var showFavorites by mutableStateOf(false)
 
 var timeOption by mutableStateOf(false) // true = military, false = standard
+var darkMode by mutableStateOf(false)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         super.onCreate(savedInstanceState)
+
         setContent {
-            AppTheme{
+            AppTheme (
+                darkTheme = darkMode
+
+            ){
                 val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
                 var loaded by remember { mutableStateOf(false) }
                 val currentLocation = 1
@@ -328,7 +337,7 @@ private fun PortraitUI(
     transitViewModel: TransitViewModel,
     drawerState: DrawerState
 ) {
-    AppTheme {
+    AppTheme(darkMode) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -947,6 +956,30 @@ fun SettingsPage(){
                         timeOption = true
                     })
                 Text("Military Time")
+            }
+
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ){
+                Text(
+                    "Dark Mode",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                Switch(
+                    checked = darkMode,
+                    onCheckedChange = {
+                        darkMode = !darkMode
+                    },
+                    modifier = Modifier.padding(4.dp)
+                )
             }
 
         }
