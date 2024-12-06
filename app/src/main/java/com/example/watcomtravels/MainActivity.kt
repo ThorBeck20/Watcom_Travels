@@ -104,16 +104,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
-            var loaded by remember { mutableStateOf(false) }
             val currentLocation = 1
             val bham = LatLng(48.73, -122.49)
 
             val allStops = dbSearch(this)
             val apiBool = allStops.getAllSearches().isEmpty()
 
-            // testing
-            val test = dbRoutes(this)
-            test.deleteAllRoutes()
+            val routesDB = dbRoutes(this)
+
+            val transitViewModel = TransitViewModel(context = this@MainActivity)
+            val uiState by transitViewModel.uiState.collectAsState()
 
             LaunchedEffect(Unit) {
                 if (apiBool) {
@@ -122,7 +122,6 @@ class MainActivity : ComponentActivity() {
                         transitViewModel.getRoutes()
                         withContext(Dispatchers.Main){
                             fetchedStops?.let { stops.addAll(it) }
-                            loaded = true
                             Log.d("@@@", "STOPS LOADED: ${stops.size}")
 
                             for (i in 0..<stops.size) {
@@ -134,13 +133,10 @@ class MainActivity : ComponentActivity() {
                 } else {
                     val fetchedStops = allStops.getAllSearches()
                     fetchedStops.let { stops.addAll(it) }
-                    loaded = true
                     Log.d("@@@", "STOPS LOADED: ${stops.size}")
                 }
             }
 
-            val transitViewModel = TransitViewModel(context = this@MainActivity)
-            val uiState by transitViewModel.uiState.collectAsState()
 
             val mapComposable = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
