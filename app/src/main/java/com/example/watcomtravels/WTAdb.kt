@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 
-const val DISTANCE = 0.4
+const val DISTANCE = 0.04
 
 // Database of favourite/saved stops - no size limit
 class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1) {
