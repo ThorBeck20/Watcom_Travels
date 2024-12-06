@@ -1,15 +1,12 @@
 package com.example.watcomtravels
 
 import android.content.Context
-import android.content.res.Resources
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -28,9 +25,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.URI
-import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
  * TODO() - Get the Places SDK and use that to have the map be searchable?
@@ -153,7 +147,7 @@ class TransitViewModel(context: Context) : ViewModel() {
      * Updates the viewModel's [TransitUiState.markers] from [stop]
      * @param stop [StopObject]
      */
-    fun addMarker(stop : StopObject) {
+    private fun addMarker(stop : StopObject) {
         /**
          * TODO() : Figure out how the hell to get this bitmap to work without using context or
          *          the file system, and not have to pass the resources
