@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.play.services.maps)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.junit.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -93,7 +94,8 @@ dependencies {
     // Required -- JUnit 4 framework
     testImplementation(libs.junit.junit)
     // Optional -- Robolectric environment
-    // testImplementation(libs.androidx.core)
+    // https://mvnrepository.com/artifact/org.robolectric/robolectric
+    testImplementation("org.robolectric:robolectric:4.14.1")
     // Optional -- Mockito framework
     testImplementation ("org.mockito:mockito-core:5.14.2")
     // Optional -- mockito-kotlin

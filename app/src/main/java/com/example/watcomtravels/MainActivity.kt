@@ -42,7 +42,6 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -112,8 +111,6 @@ class MainActivity : ComponentActivity() {
 
             ){
                 val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
-                val currentLocation = 1
-                val bham = LatLng(48.73, -122.49)
 
                 val allStops = dbSearch(this)
                 val apiBool = allStops.getAllSearches().isEmpty()
@@ -160,7 +157,11 @@ class MainActivity : ComponentActivity() {
             }
 
                 val defaultStops = getDefaultStops()
-                val nearbyStops: MutableList<StopObject>? = getNearbyStops(stops, location)
+                if(location == null){
+                    location = LatLng(48.769768, -122.485886)
+                }
+
+                val nearbyStops: List<StopObject> = allStops.ltlnSearch(location!!.latitude, location!!.longitude)
                 val items =
                     listOf(
                         Icons.Default.Settings,
@@ -199,6 +200,8 @@ class MainActivity : ComponentActivity() {
                                     selected = Icons.Default.Settings == selectedItem.value,
                                     onClick = {
                                         showSettings = true
+                                        showFavorites = false
+                                        selectedItem.value = items[0]
                                     },
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                     colors = itemColors
@@ -211,6 +214,8 @@ class MainActivity : ComponentActivity() {
                                     selected = Icons.Default.Favorite == selectedItem.value,
                                     onClick = {
                                         showFavorites = true
+                                        showSettings = false
+                                        selectedItem.value = items[1]
                                     },
                                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                                     colors = itemColors
@@ -270,6 +275,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun getLastKnownLocation(): LatLng? {
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -326,7 +332,7 @@ private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?)
 @Composable
 private fun PortraitUI(
     mapComposable: @Composable () -> Unit,
-    stops: MutableList<StopObject>,
+    stops: List<StopObject>,
     stopType: String,
     transitViewModel: TransitViewModel,
     drawerState: DrawerState
@@ -464,7 +470,7 @@ private fun PortraitUI(
 @Composable
 private fun LandscapeUI(
     mapComposable: @Composable () -> Unit,
-    stops: MutableList<StopObject>,
+    stops: List<StopObject>,
     stopType: String,
     transitViewModel: TransitViewModel,
     drawerState: DrawerState
@@ -580,7 +586,7 @@ private fun LandscapeUI(
 }
 
 @Composable
-fun StopRow(stopList: MutableList<StopObject>, stopType: String) {
+fun StopRow(stopList: List<StopObject>, stopType: String) {
 
     Column(
         modifier = Modifier
@@ -768,9 +774,9 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
                         val intent = Intent(context, RouteInfoPage::class.java)
                         intent.putExtra("routeNum", transitViewModel.selectedRoute?.routeNum)
                         Log.d("@@@", "Route info clicked!!")
-                        if(transitViewModel.selectedRoute != null){
+                        if (transitViewModel.selectedRoute != null) {
                             context.startActivity(intent)
-                        }else{
+                        } else {
                             toast.show()
                         }
                     }
@@ -1059,12 +1065,14 @@ fun FavoritesPage(){
                             Text (
                                 "${s1.name}",
                                 fontSize = 16.sp,
-                                modifier = Modifier.padding(16.dp).clickable {
-                                    val intent = Intent(thisContext, StopInfoPage::class.java)
-                                    intent.putExtra("stopNum", s1.stopNum)
-                                    intent.putExtra("time option", timeOption)
-                                    thisContext.startActivity(intent)
-                                }
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .clickable {
+                                        val intent = Intent(thisContext, StopInfoPage::class.java)
+                                        intent.putExtra("stopNum", s1.stopNum)
+                                        intent.putExtra("time option", timeOption)
+                                        thisContext.startActivity(intent)
+                                    }
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -1082,48 +1090,48 @@ fun FavoritesPage(){
                         }
                     }
                 }
+            }
 
-                Row(
-                    modifier = Modifier.padding(10.dp)
-                ) {
-                    val toastValid = Toast.makeText(thisContext, "Not a valid stop!", Toast.LENGTH_SHORT)
-                    val toastFav = Toast.makeText(thisContext, "Already added!", Toast.LENGTH_SHORT)
+            Row(
+                modifier = Modifier.padding(10.dp)
+            ) {
+                val toastValid = Toast.makeText(thisContext, "Not a valid stop!", Toast.LENGTH_SHORT)
+                val toastFav = Toast.makeText(thisContext, "Already added!", Toast.LENGTH_SHORT)
 
-                    TextField (
-                        value = input,
-                        onValueChange = {
-                            input = it
-                        },
-                        label = {
-                            Text ("Enter stop number")
-                        }
-                    )
+                TextField (
+                    value = input,
+                    onValueChange = {
+                        input = it
+                    },
+                    label = {
+                        Text ("Enter stop number")
+                    }
+                )
 
-                    Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
 
-                    Button (
-                        onClick = {
-                            try {
-                                val inputSN = input.toInt()
+                Button (
+                    onClick = {
+                        try {
+                            val inputSN = input.toInt()
 
-                                if (searchDB.findSearch(inputSN)) {
-                                    if (stopDB.findStop(inputSN)) {
-                                        toastFav.show()
-                                    } else {
-                                        stopDB.insertStop(inputSN)
-                                    }
+                            if (searchDB.findSearch(inputSN)) {
+                                if (stopDB.findStop(inputSN)) {
+                                    toastFav.show()
                                 } else {
-                                    toastValid.show()
+                                    stopDB.insertStop(inputSN)
                                 }
-                            } catch (e: NumberFormatException) {
+                            } else {
                                 toastValid.show()
                             }
+                        } catch (e: NumberFormatException) {
+                            toastValid.show()
                         }
-                    ) {
-                        Text (
-                            "Add stop"
-                        )
                     }
+                ) {
+                    Text (
+                        "Add stop"
+                    )
                 }
             }
         }

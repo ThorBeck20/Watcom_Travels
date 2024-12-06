@@ -2,6 +2,7 @@ package com.example.watcomtravels
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -98,7 +99,7 @@ class TransitViewModel(context: Context) : ViewModel() {
     fun displayRoute(route : Route) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val rtPatterns : MutableList<RoutePattern> = WTAApi.getRoutePatterns(route.routeNum)?.toMutableList() ?: mutableListOf<RoutePattern>()
+                val rtPatterns : RoutePattern? = WTAApi.getRoutePatterns(route.routeNum)
                 val r = Route(
                     routeNum = route.routeNum,
                     name = route.name,
@@ -133,8 +134,8 @@ class TransitViewModel(context: Context) : ViewModel() {
      * [StopObject]
      * @param stop [StopObject]
      */
-    fun displayStop(stop: StopObject) {
-        val markerState = this.addMarker(stop)
+    fun displayStop(stopNum: Int) {
+        val markerState = this.addMarker(stopNum)
         this.deselectMarker()
         this.selectMarker(markerState)
         this.zoomMarkers()
@@ -187,17 +188,21 @@ class TransitViewModel(context: Context) : ViewModel() {
 
     /**
      * Updates the viewModel's [TransitUiState.displayedMarkers] from [stop]
-     * @param stop [StopObject]
+     * @param stopNum [Int]
      * @return markerState [MarkerState]
      */
-    fun addMarker(stop : StopObject) : MarkerState {
+    fun addMarker(stopNum : Int) : MarkerState {
         /**
          * TODO() : Figure out how the hell to get this bitmap to work without using context or
          *          the file system, and not have to pass the resources
          */
+
+        //TODO Check for stop in DB before calling API
+        val stop = WTAApi.getStop(stopNum)
+
         val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
-        val markerState = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
+        val markerState = MarkerState(LatLng(stop!!.lat.toDouble(), stop.long.toDouble()))
         val mOptions = markerOptions { MarkerOptions()
             .position(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
             .title(stop.name)
@@ -258,16 +263,15 @@ class TransitViewModel(context: Context) : ViewModel() {
             .color(Color(android.graphics.Color.parseColor((r.color))).toArgb())
             .clickable(false)
         }
-        r.pattern?.forEach { routePattern ->
-            routePattern.pt.forEach { patternObj ->
-                if (displayStops) {
-                    patternObj.stop?.let { addMarker(it) }
-                }
+        r.pattern?.pt?.forEach { patternObj ->
+            if (displayStops) {
+                patternObj.stop?.let { addMarker(it) }
+            }
                 val latLng = LatLng(patternObj.lat.toDouble(), patternObj.long.toDouble())
                 points.add(latLng)
                 pLOptions.add(latLng)
             }
-        }
+
         _uiState.update { it -> it.copy(polylineOptions = pLOptions) }
     }
 

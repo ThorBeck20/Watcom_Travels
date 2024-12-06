@@ -37,7 +37,7 @@ data class Route (
     val routeNum: String,
     val name : String,
     val color : String,
-    var pattern : MutableList<RoutePattern>?
+    var pattern : RoutePattern?
 )
 
 // Data class to store the patterns of the route
@@ -55,7 +55,7 @@ data class PatternObject (
     val long : Float,
     val type : String,      // Seems to be either "S" for stop or "W" for ...
     val pdist : Int,        // Not really sure what the units are for this ...
-    val stop : StopObject?
+    val stop : Int?
 )
 
 data class ServiceBulletin(
@@ -139,10 +139,10 @@ class WTAApi {
                 val jsonArray = JSONArray(json)
 
                 val jsonObject = jsonArray.getJSONObject(0)
-                val id = jsonObject.getString("id").toInt()
+                val id = jsonObject.getInt("id")
                 val name: String? = jsonObject.getString("name")
-                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
-                val longitude: Float = jsonObject.getString("longitude").toFloat()
+                val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
+                val longitude: Float = jsonObject.getDouble("longitude").toFloat()
                 val sNum: Int = jsonObject.getInt("stopNum")
 
                 val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
@@ -230,32 +230,37 @@ class WTAApi {
 
             val jsonObject = JSONObject(response)
             val bustime = jsonObject.getJSONObject("bustime-response")
-            val prd = bustime.getJSONArray("prd")
 
-            var i = prd.length()
-            if (i < 1) {
+            try {
+                val prd = bustime.getJSONArray("prd")
+
+                var i = prd.length()
+                if (i < 1) {
+                    return null
+                } else {
+                    if (i > 3) {
+                        i = 3
+                    }
+
+                    var j = 0
+                    while (j < i) {
+                        val pred = prd.getJSONObject(j)
+                        val route = pred.getString("des")
+                        val time = pred.getString("prdtm")
+
+                        val hr = time.substring(9,11)
+                        val mn = time.substring(12,14)
+                        val sc = time.substring(15)
+
+                        val enter = Prediction(hr, mn, sc, route)
+                        predictionList.add(enter)
+                        j++
+                    }
+
+                    return predictionList
+                }
+            } catch (e: JSONException) {
                 return null
-            } else {
-                if (i > 3) {
-                    i = 3
-                }
-
-                var j = 0
-                while (j < i) {
-                    val pred = prd.getJSONObject(j)
-                    val route = pred.getString("des")
-                    val time = pred.getString("prdtm")
-
-                    val hr = time.substring(9,11)
-                    val mn = time.substring(12,14)
-                    val sc = time.substring(15)
-
-                    val enter = Prediction(hr, mn, sc, route)
-                    predictionList.add(enter)
-                    j++
-                }
-
-                return predictionList
             }
         }
 
@@ -295,13 +300,14 @@ class WTAApi {
             val typeStr : String = patternJSON.getString("typ")
             val pdist : Int = patternJSON.getInt("pdist")
             val stopNum : Int?
-            var stop : StopObject? = null
+            var stop : Int? = null
 
             if (typeStr == "S") {
                 try {
                     // If this passes, the pattern is a stop and stopObject has been initialized.
+                    // TODO: Change name of stop to stopNum
                     stopNum = patternJSON.getString("stpid").toInt()
-                    stop = getStop(stopNum)
+                    stop = stopNum
                 } catch (e: JSONException) {
                     Log.d("@_@", "Pattern JSON Exception : $e")
                 } catch (e: FileNotFoundException) {
@@ -352,9 +358,9 @@ class WTAApi {
         }
 
         // Gets the List of Route Patterns
-        fun getRoutePatterns(routeNum: String) : MutableList<RoutePattern>? {
-            val routePatternList : MutableList<RoutePattern> = emptyList<RoutePattern>().toMutableList()
+        fun getRoutePatterns(routeNum: String) : RoutePattern? {
             val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
+            var routePattern : RoutePattern? = null
 
             val responseJson = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
 
@@ -364,7 +370,7 @@ class WTAApi {
                 val responseJsonArray = JSONArray(responseJson)
                 Log.d("@@API@@", "Received response")
                 for (i in (0..<responseJsonArray.length())) {
-                    val routePattern : RoutePattern
+
                     val jsonObject: JSONObject = responseJsonArray.getJSONObject(i)
                     val patternJSONArray : JSONArray = jsonObject.getJSONArray("pt")
 
@@ -380,12 +386,12 @@ class WTAApi {
                         routeDir = jsonObject.getString("rtdir"),
                         pt = patternList
                     )
-                    routePatternList.add(routePattern)
                     Log.d("@@API@@", "Finished a pattern")
                 }
             }
+
             Log.d("@@@", "Routes Loaded!")
-            return routePatternList
+            return routePattern
         }
 
         // Gets a list of routes

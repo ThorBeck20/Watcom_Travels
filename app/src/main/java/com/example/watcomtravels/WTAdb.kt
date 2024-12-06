@@ -5,7 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 
-const val DISTANCE = 0.4
+const val DISTANCE = 0.04
 
 // Database of favourite/saved stops - no size limit
 class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1) {
@@ -97,8 +97,10 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
     // Get a specific StopObject based on its StopNum
     fun getSearch(sn: Int): StopObject {
         val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE (sn=\"$sn\")",
-            null)
-        cursor.moveToFirst()
+
+           null)
+
+         cursor.moveToFirst()
 
         val i = cursor.getInt(0)
         val n = cursor.getString(1)
@@ -188,9 +190,12 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
     }
 
     // Get a route with the given routeNum
-    fun getRoute(rt: String): RoutePattern {
+    fun getRoute(rt: String): RoutePattern? {
         val cursor = readableDatabase.rawQuery("SELECT * FROM ROUTES WHERE (route=\"$rt\")", null)
-        cursor.moveToFirst()
+
+        if(!cursor.moveToFirst()){
+            return null
+        }
 
         val p = cursor.getInt(1)
         val l = cursor.getInt(2)
