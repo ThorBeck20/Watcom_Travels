@@ -67,6 +67,8 @@ class RouteInfoPage : ComponentActivity() {
             finish()
         }
 
+        val routes_db = dbRoutes(this)
+
         setContent {
             AppTheme (darkMode){
                 val sheetPeekHeight: Dp = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -263,14 +265,20 @@ class RouteInfoPage : ComponentActivity() {
 
                         val patternState = remember { mutableStateOf(false) }
 
-                        LaunchedEffect(Unit) {
-                            //TODO - check if route is in DB first
-                            withContext(Dispatchers.IO) {
-                                val fetchedPattern = WTAApi.getRoutePatterns(route!!.routeNum)!!
-                                withContext(Dispatchers.Main) {
-                                    Log.d("@@Stop Info Page@@", "Fetched the route pattern")
-                                    patternState.value = true
-                                    route!!.pattern = fetchedPattern
+                        val routePattern = routes_db.getRoute(route!!.routeNum)
+
+                        if(routePattern != null){
+                            route!!.pattern = routePattern
+                        }else{
+                            LaunchedEffect(Unit) {
+
+                                withContext(Dispatchers.IO) {
+                                    val fetchedPattern = WTAApi.getRoutePatterns(route!!.routeNum)!!
+                                    withContext(Dispatchers.Main) {
+                                        Log.d("@@Stop Info Page@@", "Fetched the route pattern")
+                                        patternState.value = true
+                                        route!!.pattern = fetchedPattern
+                                    }
                                 }
                             }
                         }
