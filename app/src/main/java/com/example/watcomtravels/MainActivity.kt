@@ -119,6 +119,7 @@ class MainActivity : ComponentActivity() {
                 if (apiBool) {
                     withContext(Dispatchers.IO) {
                         val fetchedStops = WTAApi.getStopObjects()
+                        transitViewModel.getRoutes()
                         withContext(Dispatchers.Main){
                             fetchedStops?.let { stops.addAll(it) }
                             loaded = true
@@ -640,6 +641,9 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            /**
+             * TODO(): Get routes from DB instead.
+             */
             val fetchedRoutes = WTAApi.getRoutes()
             Log.d("@@@", "Fetched Routes: ${fetchedRoutes?.size ?: 0}")
             withContext(Dispatchers.Main) {
@@ -696,7 +700,8 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
                             text = { Text("${route.routeNum} ${route.name}", fontSize = 18.sp) },
                             onClick = {
                                 mSelectedText = route.name
-                                transitViewModel.updateSelectedRoute(route)
+                                transitViewModel.displayRoute(route)
+//                                transitViewModel.updateSelectedRoute(route)
                                 mExpanded = false
                                 Log.d("@@@", "Route Selected: ${route.name}")
                             }

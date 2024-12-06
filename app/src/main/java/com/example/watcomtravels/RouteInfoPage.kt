@@ -331,8 +331,9 @@ class RouteInfoPage : ComponentActivity() {
                         }
                     }else{
                         val transitViewModel = TransitViewModel(this@RouteInfoPage)
-                        transitViewModel.updateSelectedRoute(route!!)
-                        val mapComposable = @Composable { TransitMap(transitViewModel, transitViewModel.selectedRoute) }
+                        transitViewModel.displayRoute(route!!)
+//                        transitViewModel.updateSelectedRoute(route!!)
+                        val mapComposable = @Composable { TransitMap(transitViewModel) }
 
                         mapComposable.invoke()
                     }
