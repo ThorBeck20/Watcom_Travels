@@ -110,21 +110,25 @@ class MainActivity : ComponentActivity() {
                 darkTheme = darkMode
 
             ){
-                val stops: MutableList<StopObject> = remember { mutableStateListOf()}
-                var loaded by remember { mutableStateOf(false) }
+                val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
                 val currentLocation = 1
                 val bham = LatLng(48.73, -122.49)
 
                 val allStops = dbSearch(this)
                 val apiBool = allStops.getAllSearches().isEmpty()
 
+                val routesDB = dbRoutes(this)
+
+                val transitViewModel = TransitViewModel(context = this@MainActivity)
+                val uiState by transitViewModel.uiState.collectAsState()
+
                 LaunchedEffect(Unit) {
                     if (apiBool) {
                         withContext(Dispatchers.IO) {
                             val fetchedStops = WTAApi.getStopObjects()
+                            transitViewModel.getRoutes()
                             withContext(Dispatchers.Main){
                                 fetchedStops?.let { stops.addAll(it) }
-                                loaded = true
                                 Log.d("@@@", "STOPS LOADED: ${stops.size}")
 
                                 for (i in 0..<stops.size) {
@@ -136,13 +140,10 @@ class MainActivity : ComponentActivity() {
                     } else {
                         val fetchedStops = allStops.getAllSearches()
                         fetchedStops.let { stops.addAll(it) }
-                        loaded = true
                         Log.d("@@@", "STOPS LOADED: ${stops.size}")
                     }
                 }
 
-                val transitViewModel = TransitViewModel(context = this@MainActivity)
-                val uiState by transitViewModel.uiState.collectAsState()
 
             val mapComposable = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
@@ -672,6 +673,9 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            /**
+             * TODO(): Get routes from DB instead.
+             */
             val fetchedRoutes = WTAApi.getRoutes()
             Log.d("@@@", "Fetched Routes: ${fetchedRoutes?.size ?: 0}")
             withContext(Dispatchers.Main) {

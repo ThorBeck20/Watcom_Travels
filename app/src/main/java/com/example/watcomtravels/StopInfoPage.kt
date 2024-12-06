@@ -38,6 +38,7 @@ import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -79,17 +80,29 @@ class StopInfoPage : ComponentActivity() {
                     256.dp
                 }
 
-                var stop by remember { mutableStateOf<StopObject?>(null) }
+            // Create a new ViewModel for the new Activity
+            val transitViewModel = TransitViewModel(context = this@StopInfoPage)
+            val uiState by transitViewModel.uiState.collectAsState()
 
-                LaunchedEffect(Unit){
-                    withContext(Dispatchers.IO){
-                        val fetchedStop = WTAApi.getStop(stopNum)!!
-                        withContext(Dispatchers.Main){
-                            Log.d("@@Stop Info Page@@", "$fetchedStop")
-                            stop = fetchedStop
-                        }
+            val mapComposable = @Composable { TransitMap(transitViewModel) }
+            transitViewModel.loaded()
+
+            var stop by remember { mutableStateOf<StopObject?>(null) }
+
+            LaunchedEffect(Unit){
+                withContext(Dispatchers.IO){
+                    val fetchedStop = WTAApi.getStop(stopNum)!!
+                    withContext(Dispatchers.Main){
+                        Log.d("@@Stop Info Page@@", "$fetchedStop")
+                        stop = fetchedStop
+                        transitViewModel.displayStop(stop!!)
                     }
                 }
+            }
+
+            if (uiState.isLoaded) {
+                mapComposable.invoke()
+            }
 
                 if(stop == null){
                     Box(
