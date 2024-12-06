@@ -42,6 +42,7 @@ import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1034,9 +1035,11 @@ fun FavoritesPage(){
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            val searchDB = dbSearch(LocalContext.current)
-            val stopDB = dbStops(LocalContext.current)
+            val thisContext = LocalContext.current
+            var input by remember{mutableStateOf("")}
 
+            val searchDB = dbSearch(thisContext)
+            val stopDB = dbStops(thisContext)
             val stops = stopDB.getAllStops()
 
             if (stops.isNotEmpty()) {
@@ -1054,9 +1057,14 @@ fun FavoritesPage(){
                             val s1 = searchDB.getSearch(stops[index])
 
                             Text (
-                                "${s1.name}, Stop ${s1.stopNum}",
+                                "${s1.name}",
                                 fontSize = 16.sp,
-                                modifier = Modifier.padding(16.dp)
+                                modifier = Modifier.padding(16.dp).clickable {
+                                    val intent = Intent(thisContext, StopInfoPage::class.java)
+                                    intent.putExtra("stopNum", s1.stopNum)
+                                    intent.putExtra("time option", timeOption)
+                                    thisContext.startActivity(intent)
+                                }
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -1067,11 +1075,54 @@ fun FavoritesPage(){
                                 }
                             ) {
                                 Text (
-                                    "Remove stop",
+                                    "Remove",
                                     fontSize = 10.sp
                                 )
                             }
                         }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.padding(10.dp)
+                ) {
+                    val toastValid = Toast.makeText(thisContext, "Not a valid stop!", Toast.LENGTH_SHORT)
+                    val toastFav = Toast.makeText(thisContext, "Already added!", Toast.LENGTH_SHORT)
+
+                    TextField (
+                        value = input,
+                        onValueChange = {
+                            input = it
+                        },
+                        label = {
+                            Text ("Enter stop number")
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Button (
+                        onClick = {
+                            try {
+                                val inputSN = input.toInt()
+
+                                if (searchDB.findSearch(inputSN)) {
+                                    if (stopDB.findStop(inputSN)) {
+                                        toastFav.show()
+                                    } else {
+                                        stopDB.insertStop(inputSN)
+                                    }
+                                } else {
+                                    toastValid.show()
+                                }
+                            } catch (e: NumberFormatException) {
+                                toastValid.show()
+                            }
+                        }
+                    ) {
+                        Text (
+                            "Add stop"
+                        )
                     }
                 }
             }
@@ -1149,7 +1200,6 @@ fun getPlacesClient(context: Context) : PlacesClient? {
     val placesClient = Places.createClient(context)
     return placesClient
 }
-
 
 
 
