@@ -95,15 +95,10 @@ class StopInfoPage : ComponentActivity() {
                     withContext(Dispatchers.Main){
                         Log.d("@@Stop Info Page@@", "$fetchedStop")
                         stop = fetchedStop
-                        transitViewModel.displayStop(stop!!)
+                        transitViewModel.displayStop(stop!!.stopNum)
                     }
                 }
             }
-
-            if (uiState.isLoaded) {
-                mapComposable.invoke()
-            }
-
                 if(stop == null){
                     Box(
                         modifier = Modifier.fillMaxSize()
@@ -285,7 +280,10 @@ class StopInfoPage : ComponentActivity() {
                         }
                     ) {
 
-                        //TODO - add map with stop info
+                        //TODO - have map display the stop
+                        if (uiState.isLoaded) {
+                            mapComposable.invoke()
+                        }
                     }
                 }
             }

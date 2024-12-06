@@ -37,7 +37,7 @@ data class Route (
     val routeNum: String,
     val name : String,
     val color : String,
-    var pattern : MutableList<RoutePattern>?
+    var pattern : RoutePattern?
 )
 
 // Data class to store the patterns of the route
@@ -359,9 +359,9 @@ class WTAApi {
         }
 
         // Gets the List of Route Patterns
-        fun getRoutePatterns(routeNum: String) : MutableList<RoutePattern>? {
-            val routePatternList : MutableList<RoutePattern> = emptyList<RoutePattern>().toMutableList()
+        fun getRoutePatterns(routeNum: String) : RoutePattern? {
             val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
+            var routePattern : RoutePattern? = null
 
             val responseJson = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
 
@@ -371,7 +371,7 @@ class WTAApi {
                 val responseJsonArray = JSONArray(responseJson)
                 Log.d("@@API@@", "Received response")
                 for (i in (0..<responseJsonArray.length())) {
-                    val routePattern : RoutePattern
+
                     val jsonObject: JSONObject = responseJsonArray.getJSONObject(i)
                     val patternJSONArray : JSONArray = jsonObject.getJSONArray("pt")
 
@@ -387,12 +387,12 @@ class WTAApi {
                         routeDir = jsonObject.getString("rtdir"),
                         pt = patternList
                     )
-                    routePatternList.add(routePattern)
                     Log.d("@@API@@", "Finished a pattern")
                 }
             }
+
             Log.d("@@@", "Routes Loaded!")
-            return routePatternList
+            return routePattern
         }
 
         // Gets a list of routes
