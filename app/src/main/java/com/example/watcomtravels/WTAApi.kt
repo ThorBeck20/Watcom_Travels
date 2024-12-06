@@ -55,7 +55,7 @@ data class PatternObject (
     val long : Float,
     val type : String,      // Seems to be either "S" for stop or "W" for ...
     val pdist : Int,        // Not really sure what the units are for this ...
-    val stop : StopObject?
+    val stop : Int?
 )
 
 data class ServiceBulletin(
@@ -301,13 +301,14 @@ class WTAApi {
             val typeStr : String = patternJSON.getString("typ")
             val pdist : Int = patternJSON.getInt("pdist")
             val stopNum : Int?
-            var stop : StopObject? = null
+            var stop : Int? = null
 
             if (typeStr == "S") {
                 try {
                     // If this passes, the pattern is a stop and stopObject has been initialized.
+                    // TODO: Change name of stop to stopNum
                     stopNum = patternJSON.getString("stpid").toInt()
-                    stop = getStop(stopNum)
+                    stop = stopNum
                 } catch (e: JSONException) {
                     Log.d("@_@", "Pattern JSON Exception : $e")
                 } catch (e: FileNotFoundException) {
