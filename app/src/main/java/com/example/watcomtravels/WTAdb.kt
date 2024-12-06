@@ -9,54 +9,6 @@ import kotlinx.coroutines.withContext
 
 const val DISTANCE = 0.4
 
-// Class to store trip stops together
-data class TripSet (
-    val first : Int,    // first stop of a trip
-    val second : Int    // second stop of a trip
-)
-
-// Database of favourite/saved routes - no size limit
-class dbTrips(context: Context) : SQLiteOpenHelper(context, "MyTripsDb", null, 1) {
-    override fun onCreate(db: SQLiteDatabase?) {
-        db?.execSQL("CREATE TABLE IF NOT EXISTS TRIPS(first INT, second INT)")
-    }
-
-    override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        TODO("Not yet implemented")
-    }
-
-    // Add trip to database
-    fun insertTrip(sn1: Int, sn2: Int) {
-        writableDatabase.execSQL("INSERT INTO TRIPS(first, second) VALUES(\"$sn1\", \"$sn2\")")
-    }
-
-    // Delete trip from database
-    fun deleteTrip(sn1: Int, sn2: Int) {
-        writableDatabase.execSQL("DELETE FROM TRIPS WHERE (first=\"$sn1\") AND (second=\"$sn2\")")
-    }
-
-    // Delete all trips from database
-    fun deleteAllTrips() {
-        writableDatabase.execSQL("DELETE FROM TRIPS")
-    }
-
-    // Return all trips in database
-    fun getAllTrips(): List<TripSet> {
-        val ret = mutableListOf<TripSet>()
-
-        val cursor = readableDatabase.rawQuery("SELECT * FROM TRIPS", null)
-        while (cursor.moveToNext()) {
-            val fir = cursor.getInt(0)
-            val sec = cursor.getInt(1)
-            val trip = TripSet(fir, sec)
-            ret.add(trip)
-        }
-
-        cursor.close()
-        return ret
-    }
-}
-
 // Database of favourite/saved stops - no size limit
 class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1) {
     override fun onCreate(db: SQLiteDatabase?) {
@@ -82,6 +34,7 @@ class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1
         writableDatabase.execSQL("DELETE FROM STOPS")
     }
 
+    // Checks if a given stop is in the database
     fun findStop(sn: Int): Boolean {
         val cursor = readableDatabase.rawQuery("SELECT * FROM STOPS WHERE stop=\"$sn\"", null)
 
@@ -134,9 +87,18 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
         writableDatabase.execSQL("DELETE FROM SEARCH")
     }
 
+    // Checks if a given stop is in the database
+    fun findSearch(sn: Int): Boolean {
+        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE sn=\"$sn\"", null)
+
+        return cursor.use {
+            it.moveToFirst() // Check if there's at least one result
+        }
+    }
+
     // Get a specific StopObject based on its StopNum
     fun getSearch(sn: Int): StopObject {
-        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE + (sn=\"$sn\")",
+        val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE (sn=\"$sn\")",
             null)
         cursor.moveToFirst()
 
