@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -15,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,13 +50,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDrawerState
@@ -86,7 +85,6 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
-import com.google.maps.android.compose.CameraPositionState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,29 +98,38 @@ var showSettings by mutableStateOf(false)
 var showFavorites by mutableStateOf(false)
 
 var timeOption by mutableStateOf(false) // true = military, false = standard
+var darkMode by mutableStateOf(false)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         super.onCreate(savedInstanceState)
+
         setContent {
-            AppTheme{
+            AppTheme (
+                darkTheme = darkMode
+
+            ){
                 val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
-                var loaded by remember { mutableStateOf(false) }
                 val currentLocation = 1
                 val bham = LatLng(48.73, -122.49)
 
                 val allStops = dbSearch(this)
                 val apiBool = allStops.getAllSearches().isEmpty()
 
+                val routesDB = dbRoutes(this)
+
+                val transitViewModel = TransitViewModel(context = this@MainActivity)
+                val uiState by transitViewModel.uiState.collectAsState()
+
                 LaunchedEffect(Unit) {
                     if (apiBool) {
                         withContext(Dispatchers.IO) {
                             val fetchedStops = WTAApi.getStopObjects()
+                            transitViewModel.getRoutes()
                             withContext(Dispatchers.Main){
                                 fetchedStops?.let { stops.addAll(it) }
-                                loaded = true
                                 Log.d("@@@", "STOPS LOADED: ${stops.size}")
 
                                 for (i in 0..<stops.size) {
@@ -134,13 +141,10 @@ class MainActivity : ComponentActivity() {
                     } else {
                         val fetchedStops = allStops.getAllSearches()
                         fetchedStops.let { stops.addAll(it) }
-                        loaded = true
                         Log.d("@@@", "STOPS LOADED: ${stops.size}")
                     }
                 }
 
-                val transitViewModel = TransitViewModel(context = this@MainActivity)
-                val uiState by transitViewModel.uiState.collectAsState()
 
             val mapComposable = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
@@ -172,9 +176,7 @@ class MainActivity : ComponentActivity() {
                             drawerState,
                             drawerContainerColor = MaterialTheme.colorScheme.primaryContainer
                         ){
-                            Column(
-
-                            ){
+                            Column{
                                 Spacer(
                                     modifier = Modifier
                                         .height(4.dp)
@@ -246,7 +248,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     //a short list of default stops to display if nearby are not available
     private fun getDefaultStops(): MutableList<StopObject> {
-        val defaultList: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
+        val defaultList: MutableList<StopObject> = remember { mutableStateListOf()}
 
         val bhamStation = StopObject(id = 597, name = "Bellingham Station", lat = 48.75039.toFloat(), long = (-122.475612).toFloat(), stopNum = 2001)
         defaultList.add(bhamStation)
@@ -309,7 +311,7 @@ private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?)
     }
 
     val maxDistance = 20
-    val nearbyStops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
+    val nearbyStops: MutableList<StopObject> = remember { mutableStateListOf()}
 
     for(stop in allStops){
         if(((stop.lat - location.latitude) < maxDistance) && ((stop.long - location.longitude) < maxDistance)){
@@ -329,7 +331,7 @@ private fun PortraitUI(
     transitViewModel: TransitViewModel,
     drawerState: DrawerState
 ) {
-    AppTheme {
+    AppTheme(darkMode) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -502,9 +504,7 @@ private fun LandscapeUI(
                 topBar = {
                     CenterAlignedTopAppBar(
                         title = {
-                            Row(
-
-                            ) {
+                            Row{
 
                                 TextField(
                                     value = searchText.value,
@@ -674,6 +674,9 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            /**
+             * TODO(): Get routes from DB instead.
+             */
             val fetchedRoutes = WTAApi.getRoutes()
             Log.d("@@@", "Fetched Routes: ${fetchedRoutes?.size ?: 0}")
             withContext(Dispatchers.Main) {
@@ -950,6 +953,30 @@ fun SettingsPage(){
                 Text("Military Time")
             }
 
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ){
+                Text(
+                    "Dark Mode",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                Switch(
+                    checked = darkMode,
+                    onCheckedChange = {
+                        darkMode = !darkMode
+                    },
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+
         }
 
     }
@@ -1024,9 +1051,9 @@ fun FavoritesPage(){
                     modifier = Modifier.padding(8.dp)
                 )
 
-                LazyColumn() {
+                LazyColumn {
                     items(stops.size) { index ->
-                        Row() {
+                        Row{
                             val s1 = searchDB.getSearch(stops[index])
 
                             Text (
@@ -1126,7 +1153,7 @@ fun Bulletin(bulletin: ServiceBulletin): Unit {
                 }
             )
     ){
-        Column(){
+        Column{
             Text(
                 "Priority: ${bulletin.priority}",
                 fontSize = 20.sp

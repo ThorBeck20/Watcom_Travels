@@ -3,11 +3,9 @@ package com.example.watcomtravels
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
-const val DISTANCE = 0.4
+
+const val DISTANCE = 0.04
 
 // Database of favourite/saved stops - no size limit
 class dbStops(context: Context) : SQLiteOpenHelper(context, "MyStopsDb", null, 1) {
@@ -248,7 +246,7 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
         val rp = mutableListOf<PatternObject>()
         var counter = 0
         var lt = 0f
-        var ln = 0f
+        var ln: Float
 
         for (i in rps.indices) {
             if (rps[i] == ':') {

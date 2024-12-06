@@ -1,33 +1,16 @@
 package com.example.watcomtravels
 
-import android.content.Context
-import android.os.Parcel
-import android.os.Parcelable
 import android.util.Log
-import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.RectangularBounds
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
-import com.google.maps.android.ktx.BuildConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.FileNotFoundException
-import java.io.IOException
-import java.io.Serializable
-import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Arrays
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
@@ -156,10 +139,10 @@ class WTAApi {
                 val jsonArray = JSONArray(json)
 
                 val jsonObject = jsonArray.getJSONObject(0)
-                val id = jsonObject.getString("id").toInt()
+                val id = jsonObject.getInt("id")
                 val name: String? = jsonObject.getString("name")
-                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
-                val longitude: Float = jsonObject.getString("longitude").toFloat()
+                val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
+                val longitude: Float = jsonObject.getDouble("longitude").toFloat()
                 val sNum: Int = jsonObject.getInt("stopNum")
 
                 val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
@@ -371,7 +354,7 @@ class WTAApi {
 
         // Gets the List of Route Patterns
         fun getRoutePatterns(routeNum: String) : MutableList<RoutePattern>? {
-            var routePatternList : MutableList<RoutePattern>? = emptyList<RoutePattern>().toMutableList()
+            val routePatternList : MutableList<RoutePattern> = emptyList<RoutePattern>().toMutableList()
             val patternList : MutableList<PatternObject> = emptyList<PatternObject>().toMutableList()
 
             val responseJson = callAPI("https://api.ridewta.com/routes/$routeNum/patterns")
@@ -398,7 +381,7 @@ class WTAApi {
                         routeDir = jsonObject.getString("rtdir"),
                         pt = patternList
                     )
-                    routePatternList!!.add(routePattern)
+                    routePatternList.add(routePattern)
                     Log.d("@@API@@", "Finished a pattern")
                 }
             }
@@ -523,7 +506,7 @@ class WTAApi {
             var places : List<Place> = emptyList()
 
             // Specify what kind of things to return
-            val placeFields : List<Place.Field> = Arrays.asList(Place.Field.ID, Place.Field.DISPLAY_NAME)
+            val placeFields : List<Place.Field> = listOf(Place.Field.ID, Place.Field.DISPLAY_NAME)
 
             // Lat Long bounds for the search
             val swBound = LatLng(48.40004, -122.37137)

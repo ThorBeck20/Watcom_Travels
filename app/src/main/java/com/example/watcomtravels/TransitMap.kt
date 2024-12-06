@@ -28,6 +28,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -46,38 +47,16 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(true) {
-        withContext(Dispatchers.IO) {
-            viewModel.getRoutes()
-            var route = Route(
-                routeNum = "1",
-                name = "Fairhaven&Downtown",
-                color = "#ff0000",
-                pattern = null
-            )
-            withContext(Dispatchers.Main) {
-                viewModel.displayRoute(route)
-                /**
-                 * TODO() - Get all the routes and put them and their patterns in the database
-                 *          Then do the same for the stops.
-                  */
-                viewModel.loaded()
-            }
-        }
-    }
+    viewModel.loaded()
 
     val cameraPositionState : CameraPositionState = rememberCameraPositionState {
         position = uiState.cameraPosition
     }
 
     if (uiState.moveCamera) {
-            uiState.latLongBounds?.let {
-                CameraUpdateFactory.newLatLngBounds(it, 100)
-            }?.let {
-                cameraPositionState.move(
-                    update = it
-                )
-            }
+        uiState.latLongBounds?.let {
+            animateCamera(scope, cameraPositionState, it)
+        }
     }
 
     val mapProperties by remember {
@@ -115,7 +94,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
             }
         ) {
             // Render Markers
-            uiState.markers.forEach { (markerState, mOptions) ->
+            uiState.displayedMarkers.forEach { (markerState, mOptions) ->
                 Marker(
                     state = markerState,
                     title = mOptions.title,
@@ -144,6 +123,7 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
                 }
             }
 
+            // Updates the polyLine
             uiState.polylineOptions?.let { polylineOptions ->
                 Polyline(
                     points = polylineOptions.points,
@@ -157,18 +137,27 @@ fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.curre
     }
 
 
-    // Moves the camera -- In progress
-    fun moveCamera(scope: CoroutineScope, cameraPosState: CameraPositionState, newCameraPosition: CameraPosition) {
-        TODO()
-        scope.launch {
-            cameraPosState.animate(
-                update = CameraUpdateFactory.newCameraPosition(newCameraPosition),
-                durationMs = 2000
-            )
-        }
-    }
-
 }
+// Moves the camera -- In progress
+fun animateCamera(scope: CoroutineScope, cameraPosState: CameraPositionState, newCameraPosition: CameraPosition) {
+    scope.launch {
+        cameraPosState.animate(
+            update = CameraUpdateFactory.newCameraPosition(newCameraPosition),
+            durationMs = 2000
+        )
+    }
+}
+
+// Moves the camera -- In progress
+fun animateCamera(scope: CoroutineScope, cameraPosState: CameraPositionState, newLatLngBounds: LatLngBounds) {
+    scope.launch {
+        cameraPosState.animate(
+            update = CameraUpdateFactory.newLatLngBounds(newLatLngBounds, 100),
+            durationMs = 2000
+        )
+    }
+}
+
 
 fun resourceToScaledBitMap(@DrawableRes id: Int, size : Int = 10) : Bitmap? {
 //    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -188,119 +177,3 @@ fun resourceToScaledBitMap(@DrawableRes id: Int, size : Int = 10) : Bitmap? {
 //    drawable.draw(canvas)
     return resizedBitmap
 }
-
-/*
-class TransitMap() {
-
-    var stopList: MutableList<StopObject>? = mutableListOf<StopObject>()
-    var polyLineList : MutableList<Polyline> = mutableListOf<Polyline>()
-    var compPolyLine : @Composable () -> Unit = @Composable { Marker() }
-    var cameraZoom : Float = 11f
-    var cameraPosition : CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), cameraZoom)
-    var mapScope : CoroutineScope =
-
-    private fun createPolyLineRoute(r : Route) : MutableList<@Composable () -> Unit> {
-        var lines = mutableListOf<@Composable () -> Unit>()
-        if (r.pattern?.isEmpty() == true) {
-            return lines
-        }
-        for (i in (0..<(r.pattern!!.size))) {
-            val linePoints = createPolyLinePoints(r.pattern!![i].pt)
-            val p = @Composable {
-                Polyline(
-                    clickable = true,
-                    onClick = {
-//                        showRouteDetails(r)
-                    },
-                    points = linePoints,
-                    visible = true,
-                    tag = r.pattern!![i].lineNum,
-                    color = Color(android.graphics.Color.parseColor(r.color))
-                )
-            }
-            lines.add(p)
-        }
-
-        return lines
-    }
-
-    private fun createPolyLinePoints(list: List<Any>?): MutableList<LatLng> {
-        if (list?.isEmpty() == true) {
-            return mutableListOf<LatLng>()
-        }
-        val pointsList = mutableListOf<LatLng>()
-        for (i in (0..<list!!.size)) {
-            if (list[i] is StopObject) {
-                val stop: StopObject = list[i] as StopObject
-                pointsList.add(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
-            } else if (list[i] is PatternObject) {
-                val point: PatternObject = list[i] as PatternObject
-                pointsList.add(LatLng(point.lat.toDouble(), point.long.toDouble()))
-            } else {
-                Log.d("@@@", "Unknown Type passed.")
-            }
-        }
-        return pointsList
-    }
-
-    @Composable
-    fun transitMap(
-        stList: MutableList<StopObject>?,
-        resources: Resources
-    ) {
-
-        val scope : CoroutineScope = rememberCoroutineScope()
-        val cameraPositionState : CameraPositionState = rememberCameraPositionState {
-            position = cameraPosition
-        }
-
-        stopList = stList
-        var isLoaded by remember { mutableStateOf(false) }
-
-        var mapProperties by remember {
-            mutableStateOf(
-                MapProperties(
-                    isTrafficEnabled = true,
-                )
-            )
-        }
-        val mapUiSettings by remember {
-            mutableStateOf(
-                MapUiSettings(
-                    mapToolbarEnabled = false
-                )
-            )
-        }
-
-        var map = GoogleMap(
-            properties = mapProperties,
-            uiSettings = mapUiSettings,
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            onMapLoaded = { isLoaded = true },
-            googleMapOptionsFactory = {
-                GoogleMapOptions().mapId("map1")
-            }
-        )
-        {
-//        StopMarkersMapContent(
-//            stopList,
-//            resource = resources
-//        )
-            Polyline(
-                points =
-            )
-        }
-        Button(onClick = {
-            // Move the camera to a new zoom level
-//            displayRoute()
-            val camPos = CameraPosition.fromLatLngZoom(LatLng(48.toDouble(), (-122).toDouble()), 10f)
-            moveCamera(scope, cameraPositionState, camPos)
-        }) {
-            Text(text = "Do the thing")
-        }
-
-    }
-}
-
- */
