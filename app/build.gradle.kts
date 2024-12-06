@@ -89,7 +89,7 @@ dependencies {
     implementation("com.google.android.libraries.places:places:4.1.0")
 
 
-
+    testImplementation("io.mockk:mockk:1.13.3")
     // Required -- JUnit 4 framework
     testImplementation(libs.junit.junit)
     // Optional -- Robolectric environment

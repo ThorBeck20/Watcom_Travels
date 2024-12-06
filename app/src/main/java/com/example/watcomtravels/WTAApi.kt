@@ -222,8 +222,7 @@ class WTAApi {
             }
         }
 
-        // Returns next three predictions for a stop
-        // id = StopNum
+
         fun getPredictions(id: Int): List<Prediction>? {
             val predictionList = mutableListOf<Prediction>()
 
