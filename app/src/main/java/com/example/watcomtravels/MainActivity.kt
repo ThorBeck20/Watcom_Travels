@@ -768,9 +768,9 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
                         val intent = Intent(context, RouteInfoPage::class.java)
                         intent.putExtra("routeNum", transitViewModel.selectedRoute?.routeNum)
                         Log.d("@@@", "Route info clicked!!")
-                        if(transitViewModel.selectedRoute != null){
+                        if (transitViewModel.selectedRoute != null) {
                             context.startActivity(intent)
-                        }else{
+                        } else {
                             toast.show()
                         }
                     }
@@ -1059,12 +1059,14 @@ fun FavoritesPage(){
                             Text (
                                 "${s1.name}",
                                 fontSize = 16.sp,
-                                modifier = Modifier.padding(16.dp).clickable {
-                                    val intent = Intent(thisContext, StopInfoPage::class.java)
-                                    intent.putExtra("stopNum", s1.stopNum)
-                                    intent.putExtra("time option", timeOption)
-                                    thisContext.startActivity(intent)
-                                }
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .clickable {
+                                        val intent = Intent(thisContext, StopInfoPage::class.java)
+                                        intent.putExtra("stopNum", s1.stopNum)
+                                        intent.putExtra("time option", timeOption)
+                                        thisContext.startActivity(intent)
+                                    }
                             )
 
                             Spacer(modifier = Modifier.weight(1f))
@@ -1082,48 +1084,48 @@ fun FavoritesPage(){
                         }
                     }
                 }
+            }
 
-                Row(
-                    modifier = Modifier.padding(10.dp)
-                ) {
-                    val toastValid = Toast.makeText(thisContext, "Not a valid stop!", Toast.LENGTH_SHORT)
-                    val toastFav = Toast.makeText(thisContext, "Already added!", Toast.LENGTH_SHORT)
+            Row(
+                modifier = Modifier.padding(10.dp)
+            ) {
+                val toastValid = Toast.makeText(thisContext, "Not a valid stop!", Toast.LENGTH_SHORT)
+                val toastFav = Toast.makeText(thisContext, "Already added!", Toast.LENGTH_SHORT)
 
-                    TextField (
-                        value = input,
-                        onValueChange = {
-                            input = it
-                        },
-                        label = {
-                            Text ("Enter stop number")
-                        }
-                    )
+                TextField (
+                    value = input,
+                    onValueChange = {
+                        input = it
+                    },
+                    label = {
+                        Text ("Enter stop number")
+                    }
+                )
 
-                    Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
 
-                    Button (
-                        onClick = {
-                            try {
-                                val inputSN = input.toInt()
+                Button (
+                    onClick = {
+                        try {
+                            val inputSN = input.toInt()
 
-                                if (searchDB.findSearch(inputSN)) {
-                                    if (stopDB.findStop(inputSN)) {
-                                        toastFav.show()
-                                    } else {
-                                        stopDB.insertStop(inputSN)
-                                    }
+                            if (searchDB.findSearch(inputSN)) {
+                                if (stopDB.findStop(inputSN)) {
+                                    toastFav.show()
                                 } else {
-                                    toastValid.show()
+                                    stopDB.insertStop(inputSN)
                                 }
-                            } catch (e: NumberFormatException) {
+                            } else {
                                 toastValid.show()
                             }
+                        } catch (e: NumberFormatException) {
+                            toastValid.show()
                         }
-                    ) {
-                        Text (
-                            "Add stop"
-                        )
                     }
+                ) {
+                    Text (
+                        "Add stop"
+                    )
                 }
             }
         }
