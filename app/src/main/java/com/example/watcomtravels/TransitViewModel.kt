@@ -40,7 +40,7 @@ import java.nio.file.Paths
 data class TransitUiState(
     val context : Context? = null,
     val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
-    val markers : MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
+    val displayedMarkers : MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
     val selectedMarker : MarkerState? = null,
     val polylineOptions: PolylineOptions? = null,
     val routes : MutableList<Route> = mutableListOf<Route>(),
@@ -78,21 +78,21 @@ class TransitViewModel(context: Context) : ViewModel() {
         }
     }
 
+
     /**
      * Removes the displayed [Route]
      * -- WARNING --
      * This function sets:
      *  -   [TransitUiState.displayedRoute] to null
      *  -   [TransitUiState.polylineOptions] to null
-     *  -   [TransitUiState.markers] to be an empty mutable map
+     *  -   [TransitUiState.displayedMarkers] to be an empty mutable map
      */
     fun rmDisplayedRoute() {
         _uiState.update {
             it.copy(
                 displayedRoute = null,
                 polylineOptions = null,
-                markers = mutableMapOf<MarkerState, MarkerOptions>()
-
+                displayedMarkers = mutableMapOf<MarkerState, MarkerOptions>()
             )
         }
     }
@@ -125,6 +125,29 @@ class TransitViewModel(context: Context) : ViewModel() {
     }
 
     /**
+     * Used to determine if the camera needs to be moved. calls [TransitUiState.moveCamera]
+     * @return b [Boolean]
+     */
+    fun shouldMoveCamera() : Boolean {
+        var b = uiState.value.moveCamera
+        return b
+    }
+
+    /**
+     * calls [TransitViewModel.addMarker] and then [TransitViewModel.deselectMarker],
+     * [TransitViewModel.selectMarker] and finally [TransitViewModel.zoomMarkers]
+     * [StopObject]
+     * @param stop [StopObject]
+     */
+    fun displayStop(stop: StopObject) {
+        val markerState = this.addMarker(stop)
+        this.deselectMarker()
+        this.selectMarker(markerState)
+        this.zoomMarkers()
+        Log.d("@@@", "displayedStop")
+    }
+
+    /**
      * Creates a bounds builder to include the points from the [TransitUiState.polylineOptions] and
      * creates a [LatLngBounds.builder] that will trigger a zoom. This zoom must be done with a
      * [CameraPositionState], so [TransitUiState.moveCamera] is set to true.
@@ -134,6 +157,25 @@ class TransitViewModel(context: Context) : ViewModel() {
         val boundsBuilder = LatLngBounds.builder()
         for (point in points) {
             boundsBuilder.include(point)
+        }
+        val bounds = boundsBuilder.build()
+        _uiState.update { it.copy(latLongBounds = bounds) }
+        _uiState.update { it.copy(moveCamera = true) }
+    }
+
+    /**
+     * Updates the [TransitUiState.latLongBounds] and sets [TransitUiState.moveCamera] to true
+     * Creates a bounds builder to include the points from the [TransitUiState.displayedMarkers] and
+     * creates a [LatLngBounds.builder] that will trigger a zoom. This zoom must be done within a
+     * composable that saves the [CameraPositionState].
+     */
+    private fun zoomMarkers() {
+        val displayedMarkers : MutableMap<MarkerState, MarkerOptions> = uiState.value.displayedMarkers
+        val boundsBuilder = LatLngBounds.builder()
+
+        displayedMarkers.forEach { (markerState, mOptions) ->
+            val pos = markerState.position
+            boundsBuilder.include(pos)
         }
         val bounds = boundsBuilder.build()
         _uiState.update { it.copy(latLongBounds = bounds) }
@@ -150,36 +192,39 @@ class TransitViewModel(context: Context) : ViewModel() {
     }
 
     /**
-     * Updates the viewModel's [TransitUiState.markers] from [stop]
+     * Updates the viewModel's [TransitUiState.displayedMarkers] from [stop]
      * @param stop [StopObject]
+     * @return markerState [MarkerState]
      */
-    fun addMarker(stop : StopObject) {
+    fun addMarker(stop : StopObject) : MarkerState {
         /**
          * TODO() : Figure out how the hell to get this bitmap to work without using context or
          *          the file system, and not have to pass the resources
          */
         val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
-        val marker = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
+        val markerState = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
         val mOptions = markerOptions { MarkerOptions()
             .position(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
             .title(stop.name)
             .anchor(0.5f, 0.5f)
-            .icon(getIcon())
+            .icon(markerIcon)
             .flat(true)
         }
-        _uiState.update { it.copy(markers = it.markers.plus(mutableMapOf(marker to mOptions)).toMutableMap()) }
+        _uiState.update { it.copy(displayedMarkers = it.displayedMarkers.plus(mutableMapOf(markerState to mOptions)).toMutableMap()) }
+        return markerState
     }
 
 
     /**
-     * Updates the viewModel's [TransitUiState.markers] from [latLng]
+     * Updates the viewModel's [TransitUiState.displayedMarkers] from [latLng]
      * @param latLng [LatLng]
+     * @return markerState [MarkerState]
      */
-    fun addMarker(latLng: LatLng) {
+    fun addMarker(latLng: LatLng) : MarkerState {
         val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
-        val marker = MarkerState(latLng)
+        val markerState = MarkerState(latLng)
         val mOptions = markerOptions { MarkerOptions()
             .position(latLng)
             .title("Marker!")
@@ -187,7 +232,8 @@ class TransitViewModel(context: Context) : ViewModel() {
             .icon(markerIcon)
             .flat(true)
         }
-        _uiState.update { it.copy(markers = it.markers.plus(mutableMapOf(marker to mOptions)).toMutableMap()) }
+        _uiState.update { it.copy(displayedMarkers = it.displayedMarkers.plus(mutableMapOf(markerState to mOptions)).toMutableMap()) }
+        return markerState
     }
 
     /**
