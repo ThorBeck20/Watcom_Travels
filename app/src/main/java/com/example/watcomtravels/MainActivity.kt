@@ -115,10 +115,6 @@ class MainActivity : ComponentActivity() {
                 val allStops = dbSearch(this)
                 val apiBool = allStops.getAllSearches().isEmpty()
 
-                // testing
-                val test = dbRoutes(this)
-                test.deleteAllRoutes()
-
                 LaunchedEffect(Unit) {
                     if (apiBool) {
                         withContext(Dispatchers.IO) {
@@ -1012,63 +1008,9 @@ fun FavoritesPage(){
                 .padding(innerPadding)
         ) {
             val searchDB = dbSearch(LocalContext.current)
-            val tripDB = dbTrips(LocalContext.current)
             val stopDB = dbStops(LocalContext.current)
 
-            val trips = tripDB.getAllTrips()
             val stops = stopDB.getAllStops()
-
-            Log.d("@@@@", "${trips.size} - ${stops.size}")
-
-            if (trips.isNotEmpty()) {
-                Text (
-                    "Favorite Trips",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 32.sp,
-                    modifier = Modifier.padding(8.dp)
-                )
-
-                LazyColumn() {
-                    items(trips.size) { index ->
-                        Row() {
-                            val s1 = searchDB.getSearch(trips[index].first)
-                            val s2 = searchDB.getSearch(trips[index].second)
-
-                            Text (
-                                "${s1.name}, Stop ${s1.stopNum}",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(16.dp)
-                            )
-
-                            Text (
-                                "-->",
-                                fontSize = 20.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-
-                            Text (
-                                "${s2.name}, Stop ${s2.stopNum}",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            Button (
-                                onClick = {
-                                    tripDB.deleteTrip(trips[index].first, trips[index].second)
-                                }
-                            ) {
-                                Text (
-                                    "Remove trip",
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
             if (stops.isNotEmpty()) {
                 Text (
@@ -1105,17 +1047,6 @@ fun FavoritesPage(){
                         }
                     }
                 }
-            }
-
-            Button (
-                onClick = {
-                    //TODO: Ability to add to favourite trips
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text (
-                    "Add trip"
-                )
             }
         }
     }
