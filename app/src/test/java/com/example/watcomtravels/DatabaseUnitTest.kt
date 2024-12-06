@@ -149,9 +149,9 @@ class DatabaseUnitTest {
         cmpRPs(testRPTwo, allRoutes[1])
         cmpRPs(testRPThree, allRoutes[2])
 
-        cmpRPs(testRPOne, tester.getRoute("harbor"))
-        cmpRPs(testRPTwo, tester.getRoute("ln-dtDT"))
-        cmpRPs(testRPThree, tester.getRoute("ln-dtLN"))
+        cmpRPs(testRPOne, tester.getRoute("harbor")!!)
+        cmpRPs(testRPTwo, tester.getRoute("ln-dtDT")!!)
+        cmpRPs(testRPThree, tester.getRoute("ln-dtLN")!!)
 
         tester.deleteRoute("ln-dtDT")
 
