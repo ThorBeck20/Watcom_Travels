@@ -231,32 +231,37 @@ class WTAApi {
 
             val jsonObject = JSONObject(response)
             val bustime = jsonObject.getJSONObject("bustime-response")
-            val prd = bustime.getJSONArray("prd")
 
-            var i = prd.length()
-            if (i < 1) {
+            try {
+                val prd = bustime.getJSONArray("prd")
+
+                var i = prd.length()
+                if (i < 1) {
+                    return null
+                } else {
+                    if (i > 3) {
+                        i = 3
+                    }
+
+                    var j = 0
+                    while (j < i) {
+                        val pred = prd.getJSONObject(j)
+                        val route = pred.getString("des")
+                        val time = pred.getString("prdtm")
+
+                        val hr = time.substring(9,11)
+                        val mn = time.substring(12,14)
+                        val sc = time.substring(15)
+
+                        val enter = Prediction(hr, mn, sc, route)
+                        predictionList.add(enter)
+                        j++
+                    }
+
+                    return predictionList
+                }
+            } catch (e: JSONException) {
                 return null
-            } else {
-                if (i > 3) {
-                    i = 3
-                }
-
-                var j = 0
-                while (j < i) {
-                    val pred = prd.getJSONObject(j)
-                    val route = pred.getString("des")
-                    val time = pred.getString("prdtm")
-
-                    val hr = time.substring(9,11)
-                    val mn = time.substring(12,14)
-                    val sc = time.substring(15)
-
-                    val enter = Prediction(hr, mn, sc, route)
-                    predictionList.add(enter)
-                    j++
-                }
-
-                return predictionList
             }
         }
 

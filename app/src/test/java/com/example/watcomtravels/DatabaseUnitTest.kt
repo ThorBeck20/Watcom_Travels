@@ -11,6 +11,10 @@ private const val DELTA = 0.0001f
 
 @RunWith(AndroidJUnit4::class)
 class DatabaseUnitTest {
+    // Robolectric mock context for tests
+    @Mock
+    private var mockContext = RuntimeEnvironment.getApplication()
+
     // Test variables
     private val testStopOne = StopObject(1, "James St at Illinois St",
         48.76871f, -122.46502f, 7256)
@@ -49,9 +53,7 @@ class DatabaseUnitTest {
     private val testRPTwo = RoutePattern(177, 27088, "DOWNTOWN", testOPTwo)
     private val testRPThree = RoutePattern(180, 23691, "LINCOLN ST", testOPThree)
 
-    @Mock
-    private var mockContext = RuntimeEnvironment.getApplication()
-
+    // Testing the stops database
     @Test
     fun test_stopsDB() {
         val tester = dbStops(mockContext)
@@ -82,6 +84,7 @@ class DatabaseUnitTest {
         assertEquals(0, tester.getAllStops().size)
     }
 
+    // Testing the search database
     @Test
     fun test_searchDB() {
         val tester = dbSearch(mockContext)
@@ -128,6 +131,7 @@ class DatabaseUnitTest {
         assertEquals(0, tester.getAllSearches().size)
     }
 
+    // Testing the routes database
     @Test
     fun test_routesDB() {
         val tester = dbRoutes(mockContext)
@@ -161,6 +165,7 @@ class DatabaseUnitTest {
         assertEquals(0, tester.getAllRoutes().size)
     }
 
+    // Helper function - compares StopObjects
     private fun cmpObjs(expc: StopObject, actu: StopObject) {
         assertEquals(expc.id, actu.id)
         assertEquals(expc.name, actu.name)
@@ -169,6 +174,7 @@ class DatabaseUnitTest {
         assertEquals(expc.stopNum, actu.stopNum)
     }
 
+    // Helper function - compares RoutePatterns
     private fun cmpRPs(expc: RoutePattern, actu: RoutePattern) {
         assertEquals(expc.pid, actu.pid)
         assertEquals(expc.lineNum, actu.lineNum)

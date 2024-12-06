@@ -6,6 +6,7 @@ import org.junit.Test
 import org.junit.Assert.*
 import org.junit.runner.RunWith
 import org.mockito.Mock
+import org.mockito.Mockito.doThrow
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.MockitoJUnitRunner
@@ -33,7 +34,7 @@ class ExampleUnitTest {
     // val tester = mock(WTAApi.Companion::class.java)
     // `when`(tester.getStopObjects()).thenReturn(TEST_LIST)
 
-    // Tests for WTAApi
+    // Testing the getStopObjects() function
     @Test
     fun test_getStopObjects() {
         val so1 = WTAApi.getStop(7256)
@@ -89,5 +90,25 @@ class ExampleUnitTest {
         }
     }
 
-    // more API tests
+    // Testing the getPredictions() function
+    @Test
+    fun test_getPredictions() {
+        val errorTest = WTAApi.getPredictions(0)
+        assertNull(errorTest)
+
+        val lnTest = WTAApi.getPredictions(9999)
+        if (!lnTest.isNullOrEmpty()) {
+            assertTrue(lnTest.size in 1..3)
+
+            for (i in lnTest.indices) {
+                try {
+                    lnTest[i].hour.toInt()
+                    lnTest[i].min.toInt()
+                    lnTest[i].sec.toInt()
+                } catch (e: NumberFormatException) {
+                    throw(AssertionError())
+                }
+            }
+        }
+    }
 }
