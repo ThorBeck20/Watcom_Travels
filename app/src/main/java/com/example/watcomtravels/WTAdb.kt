@@ -249,9 +249,9 @@ class dbRoutes(context: Context) : SQLiteOpenHelper(context, "MyRoutesDb", null,
 
         val cursor = readableDatabase.rawQuery("SELECT * FROM ROUTES", null)
         while (cursor.moveToNext()) {
-            val p = cursor.getInt(2)
-            val l = cursor.getInt(3)
-            val d = cursor.getString(4)
+            val p = cursor.getInt(1)
+            val l = cursor.getInt(2)
+            val d = cursor.getString(3)
             val pt = cursor.getString(4)
             val po = unstringRoute(pt)
             val route = RoutePattern(p, l, d, po)

@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,6 +53,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarColors
@@ -76,6 +78,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import com.example.watcomtravels.ui.theme.AppTheme
+import com.example.watcomtravels.ui.theme.typography
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
@@ -96,46 +100,52 @@ var showSettings by mutableStateOf(false)
 var showFavorites by mutableStateOf(false)
 
 var timeOption by mutableStateOf(false) // true = military, false = standard
+var darkMode by mutableStateOf(false)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         super.onCreate(savedInstanceState)
+
         setContent {
-            val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
-            val currentLocation = 1
-            val bham = LatLng(48.73, -122.49)
+            AppTheme (
+                darkTheme = darkMode
 
-            val allStops = dbSearch(this)
-            val apiBool = allStops.getAllSearches().isEmpty()
+            ){
+                val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
+                val currentLocation = 1
+                val bham = LatLng(48.73, -122.49)
 
-            val routesDB = dbRoutes(this)
+                val allStops = dbSearch(this)
+                val apiBool = allStops.getAllSearches().isEmpty()
 
-            val transitViewModel = TransitViewModel(context = this@MainActivity)
-            val uiState by transitViewModel.uiState.collectAsState()
+                val routesDB = dbRoutes(this)
 
-            LaunchedEffect(Unit) {
-                if (apiBool) {
-                    withContext(Dispatchers.IO) {
-                        val fetchedStops = WTAApi.getStopObjects()
-                        transitViewModel.getRoutes()
-                        withContext(Dispatchers.Main){
-                            fetchedStops?.let { stops.addAll(it) }
-                            Log.d("@@@", "STOPS LOADED: ${stops.size}")
+                val transitViewModel = TransitViewModel(context = this@MainActivity)
+                val uiState by transitViewModel.uiState.collectAsState()
 
-                            for (i in 0..<stops.size) {
-                                allStops.insertSearch(stops[i])
+                LaunchedEffect(Unit) {
+                    if (apiBool) {
+                        withContext(Dispatchers.IO) {
+                            val fetchedStops = WTAApi.getStopObjects()
+                            transitViewModel.getRoutes()
+                            withContext(Dispatchers.Main){
+                                fetchedStops?.let { stops.addAll(it) }
+                                Log.d("@@@", "STOPS LOADED: ${stops.size}")
+
+                                for (i in 0..<stops.size) {
+                                    allStops.insertSearch(stops[i])
+                                }
                             }
-                        }
 
+                        }
+                    } else {
+                        val fetchedStops = allStops.getAllSearches()
+                        fetchedStops.let { stops.addAll(it) }
+                        Log.d("@@@", "STOPS LOADED: ${stops.size}")
                     }
-                } else {
-                    val fetchedStops = allStops.getAllSearches()
-                    fetchedStops.let { stops.addAll(it) }
-                    Log.d("@@@", "STOPS LOADED: ${stops.size}")
                 }
-            }
 
 
             val mapComposable = @Composable { TransitMap(transitViewModel) }
@@ -151,73 +161,87 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val defaultStops = getDefaultStops()
-            val nearbyStops: MutableList<StopObject>? = getNearbyStops(stops, location)
-            val items =
-                listOf(
-                    Icons.Default.Settings,
-                    Icons.Default.Favorite
-                )
-            val selectedItem = remember { mutableStateOf(items[0]) }
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
+                val defaultStops = getDefaultStops()
+                val nearbyStops: MutableList<StopObject>? = getNearbyStops(stops, location)
+                val items =
+                    listOf(
+                        Icons.Default.Settings,
+                        Icons.Default.Favorite
+                    )
+                val selectedItem = remember { mutableStateOf(items[0]) }
+                val drawerState = rememberDrawerState(DrawerValue.Closed)
 
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet(drawerState){
-                        Column(
-
+                ModalNavigationDrawer(
+                    drawerState = drawerState,
+                    drawerContent = {
+                        ModalDrawerSheet(
+                            drawerState,
+                            drawerContainerColor = MaterialTheme.colorScheme.primaryContainer
                         ){
-                            Spacer(
-                                modifier = Modifier
-                                    .height(4.dp)
-                            )
+                            Column(
 
-                            NavigationDrawerItem(
-                                icon = { Icon(Icons.Default.Settings, contentDescription = null)},
-                                label = { Text("Settings") },
-                                selected = Icons.Default.Settings == selectedItem.value,
-                                onClick = {
-                                    showSettings = true
-                                          },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                            )
+                            ){
+                                Spacer(
+                                    modifier = Modifier
+                                        .height(4.dp)
+                                )
 
-                            NavigationDrawerItem(
-                                icon = { Icon(Icons.Default.Favorite, contentDescription = null)},
-                                label = { Text("Favorites") },
-                                selected = Icons.Default.Favorite == selectedItem.value,
-                                onClick = {
-                                    showFavorites = true
-                                },
-                                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                            )
+                                val itemColors = NavigationDrawerItemDefaults.colors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.inversePrimary,
+                                    unselectedContainerColor = Color.Transparent,
+                                    selectedIconColor = MaterialTheme.colorScheme.secondary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedTextColor = MaterialTheme.colorScheme.secondary,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    selectedBadgeColor = MaterialTheme.colorScheme.secondary,
+                                    unselectedBadgeColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
 
+                                NavigationDrawerItem(
+                                    icon = { Icon(Icons.Default.Settings, contentDescription = null)},
+                                    label = { Text("Settings") },
+                                    selected = Icons.Default.Settings == selectedItem.value,
+                                    onClick = {
+                                        showSettings = true
+                                    },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = itemColors
+
+                                )
+
+                                NavigationDrawerItem(
+                                    icon = { Icon(Icons.Default.Favorite, contentDescription = null)},
+                                    label = { Text("Favorites") },
+                                    selected = Icons.Default.Favorite == selectedItem.value,
+                                    onClick = {
+                                        showFavorites = true
+                                    },
+                                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                                    colors = itemColors
+                                )
+
+                            }
+                        }
+                    },
+                    content = {
+
+                        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                            if(nearbyStops != null){
+                                LandscapeUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
+                            }else{
+                                LandscapeUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
+                            }
+
+                        } else {
+                            if(nearbyStops != null){
+                                PortraitUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
+                            }else{
+                                PortraitUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
+                            }
                         }
                     }
-                },
-                content = {
-
-                    if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                        if(nearbyStops != null){
-                            LandscapeUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
-                        }else{
-                            LandscapeUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
-                        }
-
-                    } else {
-                        if(nearbyStops != null){
-                            PortraitUI(mapComposable, nearbyStops, "Nearby stops", transitViewModel, drawerState)
-                        }else{
-                            PortraitUI(mapComposable, defaultStops, "Popular stops", transitViewModel, drawerState)
-                        }
-                    }
-                }
-            )
-
-
-
-
+                )
+            }
         }
     }
     fun denDix(dp : Int) : Int {
@@ -311,30 +335,36 @@ private fun PortraitUI(
     transitViewModel: TransitViewModel,
     drawerState: DrawerState
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        val scope = rememberCoroutineScope()
-        val scaffoldState = rememberBottomSheetScaffoldState()
-        val searchText = rememberSaveable { mutableStateOf("") }
+    AppTheme(darkMode) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    color = MaterialTheme.colorScheme.surface
+                ),
+
+            ) {
+            val scope = rememberCoroutineScope()
+            val scaffoldState = rememberBottomSheetScaffoldState()
+            val searchText = rememberSaveable { mutableStateOf("") }
 
 
-        if (showSettings){
-            LaunchedEffect(Unit){
-                scope.launch {
-                    drawerState.close()
+            if (showSettings){
+                LaunchedEffect(Unit){
+                    scope.launch {
+                        drawerState.close()
+                    }
                 }
-            }
-            SettingsPage()
-        }else if(showFavorites){
-            LaunchedEffect(Unit){
-                scope.launch {
-                    drawerState.close()
+                SettingsPage()
+            }else if(showFavorites){
+                LaunchedEffect(Unit){
+                    scope.launch {
+                        drawerState.close()
+                    }
                 }
-            }
 
-            FavoritesPage()
-        } else {
+                FavoritesPage()
+            } else {
 
                 val scrollState = rememberScrollState()
                 BottomSheetScaffold(
@@ -345,7 +375,8 @@ private fun PortraitUI(
                         CenterAlignedTopAppBar(
                             title = {
                                 Row(
-
+                                    modifier = Modifier
+                                        .padding(4.dp)
                                 ) {
 
                                     TextField(
@@ -356,10 +387,13 @@ private fun PortraitUI(
                                             searchText.value = it
                                         },
                                         placeholder = {
-                                            Text("Where to?")
+                                            Text(
+                                                "Where to?",
+                                                style = MaterialTheme.typography.bodyLarge)
                                         },
                                         shape = RoundedCornerShape(50.dp),
-                                        singleLine = true
+                                        singleLine = true,
+                                        textStyle = MaterialTheme.typography.bodyLarge,
 
                                     )
 
@@ -383,7 +417,14 @@ private fun PortraitUI(
                                         )
                                     }
                                 )
-                            }
+                            },
+                            colors = TopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                                actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                            )
                         )
                     },
                     sheetContent = {
@@ -398,7 +439,9 @@ private fun PortraitUI(
                             BulletinsMain()
 
                         }
-                    }
+                    },
+                    containerColor = MaterialTheme.colorScheme.surface
+
                 ) { innerPadding ->
                     Box(
                         modifier = Modifier
@@ -415,9 +458,11 @@ private fun PortraitUI(
 
 
 
-        }
+            }
 
+        }
     }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -622,11 +667,10 @@ fun StopCard(stop: StopObject) {
 
     }
 }
-@OptIn(ExperimentalMaterial3Api::class)
-
 
 @Composable
 fun RoutesMain(transitViewModel: TransitViewModel) {
+
     val routes = remember { mutableStateListOf<Route>() }
     var mExpanded by remember { mutableStateOf(false) }
     var mSelectedText by rememberSaveable { mutableStateOf(transitViewModel.selectedRoute?.name ?: "Select a route") }
@@ -656,9 +700,7 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
     ) {
         Text(
             "Routes",
-            fontSize = 32.sp,
-            textAlign = TextAlign.Left,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.titleLarge
         )
 
         Box(
@@ -675,9 +717,10 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
                         mExpanded = true
                         Log.d("@@@", "Dropdown Triggered")
                     }
-                    .background(Color.LightGray)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
                     .padding(8.dp),
-                fontSize = 20.sp
+                fontSize = 20.sp,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
             )
 
             DropdownMenu(
@@ -793,56 +836,7 @@ fun BulletinsMain(){
                     )
                 }
                 for (bulletin in bulletins) {
-                    Box(
-                        modifier = Modifier
-                            .wrapContentHeight()
-                            .fillMaxWidth()
-                            .background(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(20)
-                            )
-                            .border(
-                                width = 2.dp,
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(20)
-                            )
-                            .padding(16.dp)
-                            .clickable(
-                                enabled = true,
-                                onClick = {
-
-                                }
-                            )
-                    ){
-                        Column(){
-                            Text(
-                                "Priority: ${bulletin.priority}",
-                                fontSize = 20.sp
-                            )
-                            Text(
-                                "Subject: ${bulletin.subject}",
-                                fontSize = 20.sp
-                            )
-                            Text(
-                                "Effect: ${bulletin.effect}",
-                                fontSize = 20.sp
-                            )
-                            Text(
-                                bulletin.brief,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                "Services effected: ",
-                                fontSize = 20.sp
-                            )
-                            DisplayServiceBulletinInfo(bulletin.service)
-                        }
-
-                    }
-                    Spacer(
-                        modifier = Modifier
-                        .height(4.dp)
-                    )
+                    Bulletin(bulletin)
                 }
         }
 
@@ -899,18 +893,17 @@ fun SettingsPage(){
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 "Back",
-                                tint = MaterialTheme.colorScheme.primary
+
                             )
                         }
                     )
                 },
                 colors = TopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent,
-                    actionIconContentColor = Color.Transparent
-
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
 
 
@@ -968,6 +961,30 @@ fun SettingsPage(){
                 Text("Military Time")
             }
 
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ){
+                Text(
+                    "Dark Mode",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 32.sp,
+                    modifier = Modifier.padding(8.dp)
+                )
+
+                Switch(
+                    checked = darkMode,
+                    onCheckedChange = {
+                        darkMode = !darkMode
+                    },
+                    modifier = Modifier.padding(4.dp)
+                )
+            }
+
         }
 
     }
@@ -1004,18 +1021,16 @@ fun FavoritesPage(){
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
                                 "Back",
-                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     )
                 },
                 colors = TopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Transparent,
-                    scrolledContainerColor = Color.Transparent,
-                    actionIconContentColor = Color.Transparent
-
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
 
 
@@ -1029,63 +1044,9 @@ fun FavoritesPage(){
                 .padding(innerPadding)
         ) {
             val searchDB = dbSearch(LocalContext.current)
-            val tripDB = dbTrips(LocalContext.current)
             val stopDB = dbStops(LocalContext.current)
 
-            val trips = tripDB.getAllTrips()
             val stops = stopDB.getAllStops()
-
-            Log.d("@@@@", "${trips.size} - ${stops.size}")
-
-            if (trips.isNotEmpty()) {
-                Text (
-                    "Favorite Trips",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 32.sp,
-                    modifier = Modifier.padding(8.dp)
-                )
-
-                LazyColumn() {
-                    items(trips.size) { index ->
-                        Row() {
-                            val s1 = searchDB.getSearch(trips[index].first)
-                            val s2 = searchDB.getSearch(trips[index].second)
-
-                            Text (
-                                "${s1.name}, Stop ${s1.stopNum}",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(16.dp)
-                            )
-
-                            Text (
-                                "-->",
-                                fontSize = 20.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-
-                            Text (
-                                "${s2.name}, Stop ${s2.stopNum}",
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            Button (
-                                onClick = {
-                                    tripDB.deleteTrip(trips[index].first, trips[index].second)
-                                }
-                            ) {
-                                Text (
-                                    "Remove trip",
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
 
             if (stops.isNotEmpty()) {
                 Text (
@@ -1123,19 +1084,62 @@ fun FavoritesPage(){
                     }
                 }
             }
-
-            Button (
-                onClick = {
-                    //TODO: Ability to add to favourite trips
-                },
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            ) {
-                Text (
-                    "Add trip"
-                )
-            }
         }
     }
+}
+
+@Composable
+fun Bulletin(bulletin: ServiceBulletin): Unit {
+    Box(
+        modifier = Modifier
+            .wrapContentHeight()
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                shape = RoundedCornerShape(20)
+            )
+            .border(
+                width = 2.dp,
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                shape = RoundedCornerShape(20)
+            )
+            .padding(16.dp)
+            .clickable(
+                enabled = true,
+                onClick = {
+
+                }
+            )
+    ){
+        Column(){
+            Text(
+                "Priority: ${bulletin.priority}",
+                fontSize = 20.sp
+            )
+            Text(
+                "Subject: ${bulletin.subject}",
+                fontSize = 20.sp
+            )
+            Text(
+                "Effect: ${bulletin.effect}",
+                fontSize = 20.sp
+            )
+            Text(
+                bulletin.brief,
+                fontSize = 16.sp
+            )
+            Text(
+                "Services effected: ",
+                fontSize = 20.sp
+            )
+            DisplayServiceBulletinInfo(bulletin.service)
+        }
+
+    }
+    Spacer(
+        modifier = Modifier
+            .height(4.dp)
+    )
 }
 
 /**
