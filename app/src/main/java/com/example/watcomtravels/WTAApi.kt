@@ -4,28 +4,31 @@ import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.Log
+import androidx.lifecycle.LifecycleCoroutineScope
 import com.google.android.gms.maps.model.LatLng
-//import com.google.android.libraries.places.api.Places
-//import com.google.android.libraries.places.api.model.Place
-//import com.google.android.libraries.places.api.model.RectangularBounds
-//import com.google.android.libraries.places.api.net.PlacesClient
-//import com.google.android.libraries.places.api.net.SearchByTextRequest
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.model.RectangularBounds
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.maps.android.ktx.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-import org.json.JSONStringer
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.Serializable
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Arrays
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
 
@@ -145,6 +148,7 @@ class WTAApi {
         // Gets the stop information through the stop Number
         fun getStop(stopNum: Int) : StopObject? {
             val json = callAPI("https://api.ridewta.com/stops/$stopNum")
+
 
             if (json == null) {
                 return null
@@ -299,6 +303,30 @@ class WTAApi {
             }
 
             return bulls
+        }
+
+        // Compiles/returns a list of PatternObjects for a given route for the database
+        // In progress
+        fun getPOs(route: String): List<PatternObject>? {
+            val arrayStr = callAPI("https://api.ridewta.com/routes/$route/patterns")
+
+            if (arrayStr == null) {
+                return null
+            } else {
+                val jsonArray = JSONArray(arrayStr)
+                val patternList = mutableListOf<PatternObject>()
+
+                val jsonObject = jsonArray.getJSONObject(0)
+                val patternArray = jsonObject.getJSONArray("pt")
+
+                for (i in (0..<patternArray.length())) {
+                    val patternObject = patternArray.getJSONObject(i)
+                    val toAdd = getPattern(patternObject)
+                    patternList.add(toAdd)
+                }
+
+                return patternList
+            }
         }
 
         // Gets a specific pattern from a JSON object that represents that pattern
@@ -509,41 +537,45 @@ class WTAApi {
             return bulls
         }
 
+
+
         /**
          * Calls the placesAPI
          */
-//        private fun callPlacesAPI(str: String) : String? {
-//            var retStr : String
-//            try {
-//                // Specify what kind of things to return
-//                val placeFields : List<Place.Field> = Arrays.asList(Place.Field.ID, Place.Field.DISPLAY_NAME)
-//
-//                // Lat Long bounds for the search
-//                val swBound = LatLng(48.40004, -122.37137)
-//                val neBound = LatLng(48.51422, -122.19048)
-//
-//                val searchByTextRequest = SearchByTextRequest.builder(str, placeFields)
-//                    .setMaxResultCount(10)
-//                    .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound)).build()
-//
-//
-//            } catch (e : Exception) {
-//                Log.d("@_@", "Error: $e")
-//                return "??"
-//            }
-//            return ""
-//        }
+        suspend fun callPlacesAPI(str: String, placesClient: PlacesClient) : List<Place>? {
+            var retStr : String
+            var places : List<Place> = emptyList()
 
+            // Specify what kind of things to return
+            val placeFields : List<Place.Field> = Arrays.asList(Place.Field.ID, Place.Field.DISPLAY_NAME)
 
-        /**
-         * Test function for places API
-         */
-//        fun getPlacesSearch(str: String) : String? {
-//            var json : String
-//            runBlocking {
-//                json = callPlacesAPI(str).toString()
-//            }
-//            return json
-//        }
+            // Lat Long bounds for the search
+            val swBound = LatLng(48.40004, -122.37137)
+            val neBound = LatLng(48.51422, -122.19048)
+
+            val searchByTextRequest = SearchByTextRequest.builder(str, placeFields)
+                .setMaxResultCount(10)
+                .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound)).build()
+
+            try {
+                // Actual search
+                placesClient.searchByText(searchByTextRequest)
+                    .addOnSuccessListener { response ->
+                        if (response.places.isNotEmpty()) {
+                            places = response.places
+                            for (place in places) {
+                                place.displayName?.let { Log.i("Place - API", it) }
+                            }
+                        }
+                    }
+                    .addOnFailureListener { exception ->
+                        Log.i("Exception", exception.toString())
+                    }
+                return places
+            } catch (e : Exception) {
+                Log.d("@_@", "Error: $e")
+                return null
+            }
+        }
     }
 }

@@ -250,9 +250,8 @@ val unspecified_scheme = ColorFamily(
 
 @Composable
 fun AppTheme(
-    dynamicColor: Boolean = false,
     darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable() () -> Unit
+    content: @Composable () -> Unit
 ) {
 
   val colorScheme = when {
@@ -262,9 +261,8 @@ fun AppTheme(
 
   MaterialTheme(
     colorScheme = colorScheme,
-    typography = com.example.watcomtravels.ui.theme.typography,
-    content = content,
-      shapes = shapes
+    typography = typography,
+    content = content
   )
 }
 
