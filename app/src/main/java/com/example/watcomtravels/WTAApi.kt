@@ -139,10 +139,10 @@ class WTAApi {
                 val jsonArray = JSONArray(json)
 
                 val jsonObject = jsonArray.getJSONObject(0)
-                val id = jsonObject.getString("id").toInt()
+                val id = jsonObject.getInt("id")
                 val name: String? = jsonObject.getString("name")
-                val latitude: Float = jsonObject.getString(LATITUDE).toFloat()
-                val longitude: Float = jsonObject.getString("longitude").toFloat()
+                val latitude: Float = jsonObject.getDouble(LATITUDE).toFloat()
+                val longitude: Float = jsonObject.getDouble("longitude").toFloat()
                 val sNum: Int = jsonObject.getInt("stopNum")
 
                 val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
