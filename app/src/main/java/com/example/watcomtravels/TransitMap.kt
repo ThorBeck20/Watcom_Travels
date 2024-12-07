@@ -60,7 +60,7 @@ fun TransitMap(viewModel: TransitViewModel =
     if (uiState.moveCamera) {
         uiState.latLongBounds?.let {
             animateCamera(scope, cameraPositionState, it)
-        }
+        } ?: Log.e("TransitMap", "latlongBounds is null but moveCamera is true.")
     }
 
     val mapProperties by remember {
@@ -92,9 +92,6 @@ fun TransitMap(viewModel: TransitViewModel =
             viewModel.loaded()
             Log.d("Transit Map Composable", "Loaded!")
                       },
-        googleMapOptionsFactory = {
-            GoogleMapOptions().mapId("map1")
-        },
         onMapClick = { latLng ->
             viewModel.addMarker(latLng)
         }
@@ -138,14 +135,9 @@ fun TransitMap(viewModel: TransitViewModel =
 
         // Renders Selected Marker
         uiState.selectedMarker?.let { selected ->
-            val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
+            val camPos = CameraPosition.fromLatLngZoom(selected.position, 15f)
             viewModel.updateCameraPosition(camPos)
-            Box(
-                modifier = Modifier,
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Text(text = "Hi")
-            }
+            animateCamera(scope, cameraPositionState, camPos)
         }
 
         // Updates the polyLine
