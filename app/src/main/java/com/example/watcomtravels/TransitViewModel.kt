@@ -14,6 +14,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.maps.android.compose.CameraPositionState
@@ -31,7 +32,6 @@ import kotlinx.coroutines.withContext
  * TODO() - Get the Places SDK and use that to have the map be searchable?
  */
 
-
 data class TransitUiState(
     val context: Context? = null,
     val dbSearch: dbSearch,
@@ -40,6 +40,7 @@ data class TransitUiState(
     val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
     val displayedMarkers: MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
     val selectedMarker: MarkerState? = null,
+    val userMarker: Pair<MarkerState, MarkerOptions>? = null,
     val polylineOptions: PolylineOptions? = null,
     val routes: MutableList<Route> = mutableListOf<Route>(),
     val displayedRoute: Route? = null,
@@ -136,7 +137,7 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
 
     /**
      * calls [TransitViewModel.addMarker] and then [TransitViewModel.deselectMarker],
-     * [TransitViewModel.selectMarker] and finally [TransitViewModel.zoomMarkers]
+     * [TransitViewModel.selectMarker]
      * [StopObject]
      * @param stopNum [StopObject]
      */
@@ -144,7 +145,6 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
         val markerState = this.addMarker(stop)
         this.deselectMarker()
         this.selectMarker(markerState)
-        this.zoomMarkers()
         Log.d("@@@", "displayedStop")
     }
 
@@ -272,16 +272,15 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
      * @return markerState [MarkerState]
      */
     fun displayUser(latLng: LatLng) : MarkerState {
-        val icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
         val markerState = MarkerState(latLng)
         val mOptions = markerOptions { MarkerOptions()
             .position(latLng)
             .title("Marker!")
             .anchor(0.5f, 0.5f)
-            .icon(icon)
             .flat(true)
         }
-        _uiState.update { it.copy(displayedMarkers = it.displayedMarkers.plus(mutableMapOf(markerState to mOptions)).toMutableMap()) }
+        val userMarkerPair = Pair<MarkerState, MarkerOptions>(markerState, mOptions)
+        _uiState.update { it.copy(userMarker = userMarkerPair) }
         return markerState
     }
 

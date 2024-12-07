@@ -117,6 +117,25 @@ fun TransitMap(viewModel: TransitViewModel =
             )
         }
 
+        // Renders the user
+        uiState.userMarker?.let { (state, options) ->
+            Marker(
+                state = state,
+                title = options.title,
+                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                anchor = Offset(options.anchorU, options.anchorV),
+                flat = true,
+                onClick = {
+                    viewModel.selectMarker(state)
+                    true
+                },
+                onInfoWindowClose = {
+                    viewModel.deselectMarker()
+                }
+
+            )
+        }
+
         // Renders Selected Marker
         uiState.selectedMarker?.let { selected ->
             val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
