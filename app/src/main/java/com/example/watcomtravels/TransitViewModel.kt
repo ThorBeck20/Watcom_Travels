@@ -2,7 +2,6 @@ package com.example.watcomtravels
 
 import android.content.Context
 import android.util.Log
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -33,20 +32,23 @@ import kotlinx.coroutines.withContext
 
 
 data class TransitUiState(
-    val context : Context? = null,
+    val context: Context? = null,
+    val dbSearch: dbSearch,
+    val dbStops: dbStops,
+    val dbRoutes: dbRoutes,
     val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
-    val displayedMarkers : MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
-    val selectedMarker : MarkerState? = null,
+    val displayedMarkers: MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
+    val selectedMarker: MarkerState? = null,
     val polylineOptions: PolylineOptions? = null,
-    val routes : MutableList<Route> = mutableListOf<Route>(),
-    val displayedRoute : Route? = null,
-    val moveCamera : Boolean = false,
-    val latLongBounds : LatLngBounds? = null,
-    val isLoaded : Boolean = false
+    val routes: MutableList<Route> = mutableListOf<Route>(),
+    val displayedRoute: Route? = null,
+    val moveCamera: Boolean = false,
+    val latLongBounds: LatLngBounds? = null,
+    val isLoaded: Boolean = false
 )
 
-class TransitViewModel(context: Context) : ViewModel() {
-    private val _uiState = MutableStateFlow(TransitUiState(context))
+class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, routesDb : dbRoutes) : ViewModel() {
+    var _uiState = MutableStateFlow(TransitUiState(context, searchDb, stopsDb, routesDb))
     val uiState : StateFlow<TransitUiState> get() = _uiState
 
     var selectedRoute by mutableStateOf<Route?>(null)
@@ -132,10 +134,18 @@ class TransitViewModel(context: Context) : ViewModel() {
      * calls [TransitViewModel.addMarker] and then [TransitViewModel.deselectMarker],
      * [TransitViewModel.selectMarker] and finally [TransitViewModel.zoomMarkers]
      * [StopObject]
-     * @param stop [StopObject]
+     * @param stopNum [Int]
      */
     fun displayStop(stopNum: Int) {
-        val markerState = this.addMarker(stopNum)
+        var stopOb = uiState.value.dbSearch.getSearch(stopNum)
+        if (stopOb == null) {
+            stopOb = WTAApi.getStop(stopNum)
+        }
+        if (stopOb == null) {
+            Log.d("Transit View Model", "Could not find stop in database or API")
+            return
+        }
+        val markerState = this.addMarker(stopOb)
         this.deselectMarker()
         this.selectMarker(markerState)
         this.zoomMarkers()
@@ -188,21 +198,46 @@ class TransitViewModel(context: Context) : ViewModel() {
 
     /**
      * Updates the viewModel's [TransitUiState.displayedMarkers] from [stop]
-     * @param stopNum [Int]
+     * @param stop [StopObject]
      * @return markerState [MarkerState]
      */
-    fun addMarker(stopNum : Int) : MarkerState {
-        /**
-         * TODO() : Figure out how the hell to get this bitmap to work without using context or
-         *          the file system, and not have to pass the resources
-         */
-
+    fun addMarker(stop : StopObject) : MarkerState {
         //TODO Check for stop in DB before calling API
-        val stop = WTAApi.getStop(stopNum)
 
         val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
         val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
         val markerState = MarkerState(LatLng(stop!!.lat.toDouble(), stop.long.toDouble()))
+        val mOptions = markerOptions { MarkerOptions()
+            .position(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
+            .title(stop.name)
+            .anchor(0.5f, 0.5f)
+            .icon(markerIcon)
+            .flat(true)
+        }
+        _uiState.update { it.copy(displayedMarkers = it.displayedMarkers.plus(mutableMapOf(markerState to mOptions)).toMutableMap()) }
+        return markerState
+    }
+
+    /**
+     * Updates the viewModel's [TransitUiState.displayedMarkers] from [stopNum]
+     * @param stopNum [Int]
+     * @return markerState [MarkerState]
+     */
+    fun addMarker(stopNum : Int) : MarkerState? {
+        //TODO Check for stop in DB before calling API
+
+        var stop = uiState.value.dbSearch.getSearch(stopNum)
+        if (stop == null) {
+            stop = WTAApi.getStop(stopNum)
+        }
+        if (stop == null) {
+            Log.d("Transit View Model", "Could not find stop in database or API")
+            return null
+        }
+
+        val iconBitmap = resourceToScaledBitMap(R.drawable.busmarker,8)
+        val markerIcon = iconBitmap?.let { BitmapDescriptorFactory.fromBitmap(it) }
+        val markerState = MarkerState(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
         val mOptions = markerOptions { MarkerOptions()
             .position(LatLng(stop.lat.toDouble(), stop.long.toDouble()))
             .title(stop.name)
