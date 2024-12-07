@@ -95,12 +95,17 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
     }
 
     // Get a specific StopObject based on its StopNum
-    fun getSearch(sn: Int): StopObject {
+    fun getSearch(sn: Int): StopObject? {
         val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE (sn=\"$sn\")",
 
            null)
 
-         cursor.moveToFirst()
+        if(!cursor.moveToFirst()){
+            return null
+        }
+
+        cursor.moveToFirst()
+
 
         val i = cursor.getInt(0)
         val n = cursor.getString(1)
@@ -114,7 +119,7 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
     }
 
     // Returns a list of StopObjects within a ~2mi radius of the passed location
-    fun ltlnSearch(lati: Double, long: Double): List<StopObject> {
+    fun ltlnSearch(lati: Double, long: Double): List<StopObject>? {
         val ret = mutableListOf<StopObject>()
 
         val srLat = lati - DISTANCE
@@ -124,6 +129,10 @@ class dbSearch(context: Context) : SQLiteOpenHelper(context, "MySearchDB", null,
 
         val cursor = readableDatabase.rawQuery("SELECT * FROM SEARCH WHERE " +
                 "(lat BETWEEN $srLat AND $erLat) AND (lon BETWEEN $srLon AND $erLon)", null)
+
+        if(!cursor.moveToFirst()){
+            return null
+        }
 
         while (cursor.moveToNext()) {
             val i = cursor.getInt(0)

@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
 
                 val routesDB = dbRoutes(this)
 
-                val transitViewModel = TransitViewModel(context = this@MainActivity)
+                val transitViewModel = TransitViewModel(context = this@MainActivity, allStops)
                 val uiState by transitViewModel.uiState.collectAsState()
 
                 LaunchedEffect(Unit) {
@@ -125,6 +125,7 @@ class MainActivity : ComponentActivity() {
                         withContext(Dispatchers.IO) {
                             val fetchedStops = WTAApi.getStopObjects()
                             transitViewModel.getRoutes()
+                            transitViewModel.displayStop(fetchedStops!![0].stopNum)
                             withContext(Dispatchers.Main){
                                 fetchedStops?.let { stops.addAll(it) }
                                 Log.d("@@@", "STOPS LOADED: ${stops.size}")
@@ -161,7 +162,7 @@ class MainActivity : ComponentActivity() {
                     location = LatLng(48.769768, -122.485886)
                 }
 
-                val nearbyStops: List<StopObject> = allStops.ltlnSearch(location!!.latitude, location!!.longitude)
+                val nearbyStops: List<StopObject>? = allStops.ltlnSearch(location!!.latitude, location!!.longitude)
                 val items =
                     listOf(
                         Icons.Default.Settings,
@@ -1061,19 +1062,24 @@ fun FavoritesPage(){
                     items(stops.size) { index ->
                         Row{
                             val s1 = searchDB.getSearch(stops[index])
+                            if (s1 == null) {
+                                // TODO: Not sure what to do in this case
 
-                            Text (
-                                "${s1.name}",
-                                fontSize = 16.sp,
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .clickable {
-                                        val intent = Intent(thisContext, StopInfoPage::class.java)
-                                        intent.putExtra("stopNum", s1.stopNum)
-                                        intent.putExtra("time option", timeOption)
-                                        thisContext.startActivity(intent)
-                                    }
-                            )
+                            } else {
+                                Text(
+                                    "${s1.name}",
+                                    fontSize = 16.sp,
+                                    modifier = Modifier
+                                        .padding(16.dp)
+                                        .clickable {
+                                            val intent =
+                                                Intent(thisContext, StopInfoPage::class.java)
+                                            intent.putExtra("stopNum", s1.stopNum)
+                                            intent.putExtra("time option", timeOption)
+                                            thisContext.startActivity(intent)
+                                        }
+                                )
+                            }
 
                             Spacer(modifier = Modifier.weight(1f))
 
