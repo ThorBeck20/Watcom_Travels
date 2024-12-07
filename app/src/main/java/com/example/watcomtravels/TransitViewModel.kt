@@ -60,6 +60,9 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
         Log.d("TVM @@@", "Selected route updated: $selectedRoute")
     }
 
+    /**
+     *
+     */
 
     /**
      * Updates the viewModel by calling [WTAApi.getRoutes] to update the viewModel's
@@ -96,7 +99,7 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
     }
 
     /**
-     * Updates the viewModel's [TransitUiState.displayRoute] by passing the [route] to the [WTAApi].
+     * Updates the viewModel's [TransitUiState.displayedRoute] by passing the [route] to the [WTAApi].
      * @param route [Route]
      */
     fun displayRoute(route : Route) {
@@ -135,18 +138,10 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
      * calls [TransitViewModel.addMarker] and then [TransitViewModel.deselectMarker],
      * [TransitViewModel.selectMarker] and finally [TransitViewModel.zoomMarkers]
      * [StopObject]
-     * @param stopNum [Int]
+     * @param stopNum [StopObject]
      */
-    fun displayStop(stopNum: Int) {
-        var stopOb = uiState.value.dbSearch.getSearch(stopNum)
-        if (stopOb == null) {
-            stopOb = WTAApi.getStop(stopNum)
-        }
-        if (stopOb == null) {
-            Log.d("Transit View Model", "Could not find stop in database or API")
-            return
-        }
-        val markerState = this.addMarker(stopOb)
+    fun displayStop(stop: StopObject) {
+        val markerState = this.addMarker(stop)
         this.deselectMarker()
         this.selectMarker(markerState)
         this.zoomMarkers()
@@ -272,6 +267,25 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
     }
 
     /**
+     * Displays a marker of the users current location using [latLng]
+     * @param latLng [LatLng]
+     * @return markerState [MarkerState]
+     */
+    fun displayUser(latLng: LatLng) : MarkerState {
+        val icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+        val markerState = MarkerState(latLng)
+        val mOptions = markerOptions { MarkerOptions()
+            .position(latLng)
+            .title("Marker!")
+            .anchor(0.5f, 0.5f)
+            .icon(icon)
+            .flat(true)
+        }
+        _uiState.update { it.copy(displayedMarkers = it.displayedMarkers.plus(mutableMapOf(markerState to mOptions)).toMutableMap()) }
+        return markerState
+    }
+
+    /**
      * Updates the viewModel's [TransitUiState.selectedMarker] with [marker].
      * @param marker [MarkerState]
      */
@@ -316,5 +330,12 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
      */
     fun loaded() {
         _uiState.update { it.copy(isLoaded = true) }
+    }
+
+    /**
+     * @return [TransitUiState.isLoaded]
+     */
+    fun isLoaded() : Boolean {
+        return _uiState.value.isLoaded
     }
 }
