@@ -76,6 +76,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -119,13 +121,13 @@ class MainActivity : ComponentActivity() {
             ){
                 val stops: MutableList<StopObject> = remember { mutableStateListOf<StopObject>()}
 
-                val allStops = dbSearch(this)
-                val apiBool = allStops.getAllSearches().isEmpty()
-
-                val routesDB = dbRoutes(this)
+                val searchDb = dbSearch(this)
                 val stopsDB = dbStops(this)
+                val routesDB = dbRoutes(this)
+                val apiBool = searchDb.getAllSearches().isEmpty()
 
-                val transitViewModel = TransitViewModel(context = this@MainActivity, allStops, stopsDB, routesDB)
+
+                val transitViewModel = TransitViewModel(context = this@MainActivity, searchDb, stopsDB, routesDB)
                 val uiState by transitViewModel.uiState.collectAsState()
 
                 LaunchedEffect(Unit) {
@@ -133,26 +135,26 @@ class MainActivity : ComponentActivity() {
                         withContext(Dispatchers.IO) {
                             val fetchedStops = WTAApi.getStopObjects()
                             transitViewModel.getRoutes()
-                            transitViewModel.displayStop(fetchedStops!![0].stopNum)
+                            transitViewModel.displayStop(fetchedStops!![0])
                             withContext(Dispatchers.Main){
                                 fetchedStops?.let { stops.addAll(it) }
                                 Log.d("@@@", "STOPS LOADED: ${stops.size}")
 
                                 for (i in 0..<stops.size) {
-                                    allStops.insertSearch(stops[i])
+                                    searchDb.insertSearch(stops[i])
                                 }
                             }
 
                         }
                     } else {
-                        val fetchedStops = allStops.getAllSearches()
+                        val fetchedStops = searchDb.getAllSearches()
                         fetchedStops.let { stops.addAll(it) }
                         Log.d("@@@", "STOPS LOADED: ${stops.size}")
                     }
                 }
 
 
-            val mapComposable = @Composable { TransitMap(transitViewModel) }
+            val mapComposable = @Composable { TransitMap(this@MainActivity, transitViewModel) }
             var location: LatLng? = null
 
             LaunchedEffect(true) {
@@ -170,7 +172,7 @@ class MainActivity : ComponentActivity() {
                     location = LatLng(48.769768, -122.485886)
                 }
 
-                val nearbyStops: List<StopObject>? = allStops.ltlnSearch(location!!.latitude, location!!.longitude)
+                val nearbyStops: List<StopObject>? = searchDb.ltlnSearch(location!!.latitude, location!!.longitude)
                 val items =
                     listOf(
                         Icons.Default.Settings,
@@ -319,7 +321,7 @@ class MainActivity : ComponentActivity() {
 
 }
 @Composable
-private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?): MutableList<StopObject>? {
+private fun getNearbyStops(searchDb: MutableList<StopObject>, location: LatLng?): MutableList<StopObject>? {
 
     if(location == null) {
         return null
@@ -328,7 +330,7 @@ private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?)
     val maxDistance = 20
     val nearbyStops: MutableList<StopObject> = remember { mutableStateListOf()}
 
-    for(stop in allStops){
+    for(stop in searchDb){
         if(((stop.lat - location.latitude) < maxDistance) && ((stop.long - location.longitude) < maxDistance)){
             nearbyStops.add(stop)
         }
@@ -426,7 +428,9 @@ fun PortraitUI(
                                                     withContext(Dispatchers.IO) {
                                                         val fetchedResults = WTAApi.callPlacesAPI(searchText.value, placesClient!!)
                                                         withContext(Dispatchers.Main){
-                                                            searchResults.value = fetchedResults
+                                                            if (fetchedResults != null) {
+                                                                searchResults.value = fetchedResults
+                                                            }
                                                             Log.d("@@@", "got the search results!")
                                                         }
 
