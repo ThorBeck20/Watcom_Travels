@@ -90,36 +90,24 @@ class StopInfoPage : ComponentActivity() {
                 val transitViewModel = TransitViewModel(context = this@StopInfoPage, searchDB, stopDB, routeDB)
                 val uiState by transitViewModel.uiState.collectAsState()
 
-                val mapComposable = @Composable { TransitMap(this@StopInfoPage, transitViewModel) }
+                val mapComposable = @Composable { TransitMap(transitViewModel) }
 
-
-            var stop by remember { mutableStateOf<StopObject?>(null) }
                 var stop by remember { mutableStateOf<StopObject?>(null) }
                 stop = searchDB.getSearch(stopNum)
 
                 LaunchedEffect(Unit){
                     withContext(Dispatchers.IO) {
                         if (stop == null) {
-                            val fetchedStop = WTAApi.getStop(stopNum)!!
+                            val fetchedStop = WTAApi.getStop(stopNum)
                             withContext(Dispatchers.Main){
                                 Log.d("@@Stop Info Page@@", "$fetchedStop")
                                 stop = fetchedStop
-//                                transitViewModel.loaded()
-                                if(transitViewModel.isLoaded()) {
-                                    transitViewModel.displayStop(stop!!)
-                                } else {
-
-                                }
+                                displayStop(stop!!, transitViewModel = transitViewModel)
                             }
                         } else {
                             withContext(Dispatchers.Main){
                                 Log.d("@@Stop Info Page@@", "$stop")
-//                                transitViewModel.loaded()
-                                if(transitViewModel.isLoaded()) {
-                                    transitViewModel.displayStop(stop!!)
-                                } else {
-
-                                }
+                                displayStop(stop!!, transitViewModel = transitViewModel)
                             }
                         }
                     }
@@ -373,3 +361,15 @@ fun Prediction(prediction: Prediction, timeAdj: Int){
     )
 }
 
+/**
+ * calls [TransitViewModel.addMarker] and then [TransitViewModel.deselectMarker],
+ * [TransitViewModel.selectMarker]
+ * [StopObject]
+ * @param stopNum [StopObject]
+ */
+fun displayStop(stop: StopObject, transitViewModel: TransitViewModel) {
+    val markerState = transitViewModel.addMarker(stop)
+    transitViewModel.deselectMarker()
+    transitViewModel.selectMarker(markerState)
+    Log.d("@@@", "displayedStop")
+}

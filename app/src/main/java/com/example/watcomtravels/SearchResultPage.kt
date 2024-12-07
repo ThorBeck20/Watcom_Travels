@@ -162,6 +162,8 @@ class SearchResultPage : ComponentActivity() {
 
                         if (uiState.isLoaded) {
                             mapComposable.invoke()
+                        } else {
+                            CircularProgressIndicator()
                         }
                     }
                 }
