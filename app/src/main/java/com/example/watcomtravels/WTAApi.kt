@@ -6,11 +6,14 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.RectangularBounds
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.FileNotFoundException
 import java.net.URL
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 
 const val LATITUDE = "latitutde" // The api spelled latitude wrong ...
@@ -506,12 +509,9 @@ class WTAApi {
         /**
          * Calls the placesAPI
          */
-        suspend fun callPlacesAPI(str: String, placesClient: PlacesClient) : List<Place>? {
-            var retStr : String
-            var places : List<Place> = emptyList()
-
+        suspend fun callPlacesAPI(str: String, placesClient: PlacesClient): List<Place> {
             // Specify what kind of things to return
-            val placeFields : List<Place.Field> = listOf(Place.Field.ID, Place.Field.DISPLAY_NAME)
+            val placeFields: List<Place.Field> = listOf(Place.Field.ID, Place.Field.DISPLAY_NAME)
 
             // Lat Long bounds for the search
             val swBound = LatLng(48.40004, -122.37137)
@@ -519,26 +519,29 @@ class WTAApi {
 
             val searchByTextRequest = SearchByTextRequest.builder(str, placeFields)
                 .setMaxResultCount(10)
-                .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound)).build()
+                .setLocationRestriction(RectangularBounds.newInstance(swBound, neBound))
+                .build()
 
-            try {
-                // Actual search
-                placesClient.searchByText(searchByTextRequest)
-                    .addOnSuccessListener { response ->
-                        if (response.places.isNotEmpty()) {
-                            places = response.places
-                            for (place in places) {
-                                place.displayName?.let { Log.i("Place - API", it) }
+            return suspendCancellableCoroutine { continuation ->
+                try {
+                    placesClient.searchByText(searchByTextRequest)
+                        .addOnSuccessListener { response ->
+                            if (response.places.isNotEmpty()) {
+                                val places = response.places
+                                Log.i("Place - API", "Fetched ${places.size} places")
+                                continuation.resume(places) // Resume with results
+                            } else {
+                                Log.i("Place - API", "No places found")
+                                continuation.resume(emptyList()) // Resume with empty list
                             }
                         }
-                    }
-                    .addOnFailureListener { exception ->
-                        Log.i("Exception", exception.toString())
-                    }
-                return places
-            } catch (e : Exception) {
-                Log.d("@_@", "Error: $e")
-                return null
+                        .addOnFailureListener { exception ->
+                            Log.e("Place - API", "Error fetching places: $exception")
+                            continuation.resumeWithException(exception) // Resume with exception
+                        }
+                } catch (e: Exception) {
+                    continuation.resumeWithException(e) // Handle any other exceptions
+                }
             }
         }
     }

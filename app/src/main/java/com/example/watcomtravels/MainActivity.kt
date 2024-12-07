@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
@@ -45,6 +46,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -72,6 +74,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -83,8 +86,10 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.PlacesClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -339,6 +344,10 @@ private fun PortraitUI(
     drawerState: DrawerState
 ) {
     AppTheme(darkMode) {
+
+        val placesClient = getPlacesClient(LocalContext.current)
+        var searchResults = rememberSaveable {mutableStateOf(emptyList<Place>())}
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -380,12 +389,13 @@ private fun PortraitUI(
                                 Row(
                                     modifier = Modifier
                                         .padding(4.dp)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
 
                                     TextField(
                                         value = searchText.value,
-                                        modifier = Modifier
-                                            .fillMaxWidth(),
                                         onValueChange = {
                                             searchText.value = it
                                         },
@@ -398,6 +408,40 @@ private fun PortraitUI(
                                         singleLine = true,
                                         textStyle = MaterialTheme.typography.bodyLarge,
 
+                                    )
+
+                                    val coroutineScope = rememberCoroutineScope()
+                                    val keyboardController = LocalSoftwareKeyboardController.current
+
+                                    IconButton(
+                                        onClick = {
+
+                                            if(searchText.value != ""){
+
+                                                coroutineScope.launch {
+                                                    withContext(Dispatchers.IO) {
+                                                        val fetchedResults = WTAApi.callPlacesAPI(searchText.value, placesClient!!)
+                                                        withContext(Dispatchers.Main){
+                                                            searchResults.value = fetchedResults
+                                                            Log.d("@@@", "got the search results!")
+                                                        }
+
+                                                    }
+                                                }
+
+                                            }else{
+                                                searchResults.value = emptyList()
+                                            }
+
+                                            keyboardController?.hide()
+
+                                        },
+                                        content = {
+                                            Icon(
+                                                Icons.Default.Search,
+                                                contentDescription = "search"
+                                            )
+                                        }
                                     )
 
 
@@ -436,9 +480,19 @@ private fun PortraitUI(
                                 .verticalScroll(scrollState),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            RoutesMain(transitViewModel)
-                            StopRow(stops, stopType)
-                            BulletinsMain()
+
+                            if(searchResults.value.isNotEmpty()){
+                                Log.d("@@@", "displaying search results")
+                                SearchResultsList(searchResults.value)
+                                RoutesMain(transitViewModel)
+                                StopRow(stops, stopType)
+                                BulletinsMain()
+                            }else{
+                                RoutesMain(transitViewModel)
+                                StopRow(stops, stopType)
+                                BulletinsMain()
+                            }
+
 
                         }
                     },
@@ -587,6 +641,57 @@ private fun LandscapeUI(
 }
 
 @Composable
+fun SearchResultsList(results: List<Place>) {
+    Column(
+        Modifier.fillMaxWidth()
+    ) {
+
+        Text(
+            "Search Results",
+            style = MaterialTheme.typography.titleLarge
+
+        )
+
+        for (result in results) {
+            Box(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(20)
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(20)
+                    )
+                    .padding(16.dp)
+                    .clickable(
+                        enabled = true,
+                        onClick = {
+
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+
+            ){
+                Text(
+                    text = result.displayName!!,
+                    Modifier
+                        .fillMaxWidth()
+                )
+            }
+
+            Spacer(
+                modifier = Modifier
+                    .height(4.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun StopRow(stopList: List<StopObject>, stopType: String) {
 
     Column(
@@ -595,9 +700,7 @@ fun StopRow(stopList: List<StopObject>, stopType: String) {
     ){
         Text(
             stopType,
-            fontSize = 32.sp,
-            textAlign = TextAlign.Left,
-            fontWeight = FontWeight.SemiBold
+            style = MaterialTheme.typography.titleLarge
         )
 
         val scrollState = rememberScrollState()
