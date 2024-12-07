@@ -81,6 +81,7 @@ class RouteInfoPage : ComponentActivity() {
                     256.dp
                 }
                 var route by remember { mutableStateOf<Route?>(null) }
+//                route = routesDb.getRoute(routeNum)
 
                 LaunchedEffect(Unit) {
                     withContext(Dispatchers.IO) {
@@ -306,10 +307,13 @@ class RouteInfoPage : ComponentActivity() {
                             }
                         }else{
                             val transitViewModel = TransitViewModel(this@RouteInfoPage, searchDb, stopsDb, routesDb)
-                            transitViewModel.updateSelectedRoute(route!!)
-                            val mapComposable = @Composable { TransitMap(this@RouteInfoPage, transitViewModel) }
-
-                            mapComposable.invoke()
+                            transitViewModel.displayRoute(route!!)
+                            val mapComposable = @Composable { TransitMap(transitViewModel) }
+                            if (transitViewModel.isLoaded()) {
+                                mapComposable.invoke()
+                            } else {
+                                CircularProgressIndicator()
+                            }
                         }
 
 
