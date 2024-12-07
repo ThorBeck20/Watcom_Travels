@@ -83,7 +83,6 @@ class SearchResultPage : ComponentActivity() {
                 transitViewModel.displayUser(latLng)
 
                 val mapComposable = @Composable { TransitMap(transitViewModel) }
-                transitViewModel.loaded()
 
                 var nearbyStops by remember { mutableStateOf<List<StopObject>?>(emptyList()) }
 
