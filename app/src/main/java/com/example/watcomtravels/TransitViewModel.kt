@@ -28,9 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * TODO() - Get the Places SDK and use that to have the map be searchable?
- */
+
 
 data class TransitUiState(
     val context: Context? = null,
@@ -142,9 +140,9 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
      * @param stopNum [StopObject]
      */
     fun displayStop(stop: StopObject) {
-        val markerState = this.addMarker(stop)
-        this.deselectMarker()
-        this.selectMarker(markerState)
+        val markerState = addMarker(stop)
+        deselectMarker()
+        selectMarker(markerState)
         Log.d("@@@", "displayedStop")
     }
 
@@ -220,8 +218,6 @@ class TransitViewModel(context: Context, searchDb: dbSearch, stopsDb: dbStops, r
      * @return markerState [MarkerState]
      */
     fun addMarker(stopNum : Int) : MarkerState? {
-        //TODO Check for stop in DB before calling API
-
         var stop = uiState.value.dbSearch.getSearch(stopNum)
         if (stop == null) {
             stop = WTAApi.getStop(stopNum)
