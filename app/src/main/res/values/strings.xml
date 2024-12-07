@@ -3,4 +3,5 @@
     <string name="title_activity_stop_info_page">StopInfoPage</string>
     <string name="title_activity_route_info_page">RouteInfoPage</string>
     <string name="title_activity_route_schedule">RouteSchedule</string>
+    <string name="title_activity_search_result_page">SearchResultPage</string>
 </resources>

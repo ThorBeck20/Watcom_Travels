@@ -101,6 +101,7 @@ import kotlin.coroutines.suspendCoroutine
 private lateinit var fusedLocationClient: FusedLocationProviderClient
 var showSettings by mutableStateOf(false)
 var showFavorites by mutableStateOf(false)
+var selectedSearch: Place? = null
 
 var timeOption by mutableStateOf(false) // true = military, false = standard
 var darkMode by mutableStateOf(false)
@@ -348,7 +349,7 @@ fun PortraitUI(
     AppTheme(darkMode) {
 
         val placesClient = getPlacesClient(LocalContext.current)
-        var searchResults = rememberSaveable {mutableStateOf(emptyList<Place>())}
+        val searchResults = rememberSaveable {mutableStateOf(emptyList<Place>())}
 
         Column(
             modifier = Modifier
@@ -648,6 +649,9 @@ fun LandscapeUI(
 
 @Composable
 fun SearchResultsList(results: List<Place>) {
+
+    val context = LocalContext.current
+
     Column(
         Modifier.fillMaxWidth()
     ) {
@@ -676,7 +680,15 @@ fun SearchResultsList(results: List<Place>) {
                     .clickable(
                         enabled = true,
                         onClick = {
-
+                            selectedSearch = result
+                            Log.d("@@@", "Selected search result: ${selectedSearch!!.displayName}")
+                            val intent = Intent(context, SearchResultPage::class.java)
+                            result.location?.let {
+                                intent.putExtra("lat", it.latitude)
+                                intent.putExtra("long", it.longitude)
+                            }
+                            intent.putExtra("display name", result.displayName)
+                            context.startActivity(intent)
                         }
                     ),
                 contentAlignment = Alignment.Center
