@@ -17,6 +17,11 @@
         android:theme="@style/Theme.WatcomTravels"
         tools:targetApi="31">
         <activity
+            android:name=".RouteSchedule"
+            android:exported="false"
+            android:label="@string/title_activity_route_schedule"
+            android:theme="@style/Theme.WatcomTravels" />
+        <activity
             android:name=".RouteInfoPage"
             android:exported="false"
             android:label="@string/title_activity_route_info_page"

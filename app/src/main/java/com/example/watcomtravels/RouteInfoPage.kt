@@ -5,6 +5,8 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -67,7 +69,10 @@ class RouteInfoPage : ComponentActivity() {
             finish()
         }
 
-        val routes_db = dbRoutes(this)
+        val allStops = dbSearch(this)
+        val routesDB = dbRoutes(this)
+        val stopsDB = dbStops(this)
+
 
         setContent {
             AppTheme (darkMode){
@@ -175,10 +180,10 @@ class RouteInfoPage : ComponentActivity() {
                                 )
 
                                 val context = LocalContext.current
-                                val url =
-                                    "https://schedules.ridewta.com/#route-details?routeNum=${route!!.routeNum}"
-                                Box(
+                                val url = "https://schedules.ridewta.com/#route-details?"
+                                val hostInApp = false //Set to true if you want to host the routes website within the app
 
+                                Box(
                                     modifier = Modifier
                                         .wrapContentHeight()
                                         .fillMaxWidth()
@@ -195,8 +200,17 @@ class RouteInfoPage : ComponentActivity() {
                                         .clickable(
                                             enabled = true,
                                             onClick = {
-                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                                context.startActivity(intent)
+                                                if(hostInApp){
+                                                    //attempted to implement hosting the webpage in the app, but it was not functioning correctly
+                                                    val intent = Intent(context, RouteSchedule::class.java).apply {
+                                                        putExtra("url", url)
+                                                    }
+                                                    context.startActivity(intent)
+                                                }else{
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                                    context.startActivity(intent)
+                                                }
+
                                             }
                                         )
                                 ) {
@@ -265,7 +279,7 @@ class RouteInfoPage : ComponentActivity() {
 
                         val patternState = remember { mutableStateOf(false) }
 
-                        val routePattern = routes_db.getRoute(route!!.routeNum)
+                        val routePattern = routesDB.getRoute(route!!.routeNum)
 
                         if(routePattern != null){
                             route!!.pattern = routePattern
@@ -292,7 +306,7 @@ class RouteInfoPage : ComponentActivity() {
                                 )
                             }
                         }else{
-                            val transitViewModel = TransitViewModel(this@RouteInfoPage)
+                            val transitViewModel = TransitViewModel(this@RouteInfoPage, allStops, stopsDB, routesDB)
                             transitViewModel.updateSelectedRoute(route!!)
                             val mapComposable = @Composable { TransitMap(transitViewModel) }
 
@@ -307,4 +321,6 @@ class RouteInfoPage : ComponentActivity() {
         }
     }
 }
+
+
 

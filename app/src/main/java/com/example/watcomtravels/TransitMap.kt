@@ -43,7 +43,13 @@ import kotlinx.coroutines.withContext
 
 
 @Composable
-fun TransitMap(viewModel: TransitViewModel = TransitViewModel(LocalContext.current)) {
+fun TransitMap(viewModel: TransitViewModel =
+                   TransitViewModel(
+                       LocalContext.current,
+                       searchDb = dbSearch(LocalContext.current),
+                       stopsDb = dbStops(LocalContext.current),
+                       routesDb = dbRoutes(LocalContext.current))
+) {
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
 

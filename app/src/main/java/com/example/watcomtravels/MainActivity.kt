@@ -75,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -121,8 +122,9 @@ class MainActivity : ComponentActivity() {
                 val apiBool = allStops.getAllSearches().isEmpty()
 
                 val routesDB = dbRoutes(this)
+                val stopsDB = dbStops(this)
 
-                val transitViewModel = TransitViewModel(context = this@MainActivity, allStops)
+                val transitViewModel = TransitViewModel(context = this@MainActivity, allStops, stopsDB, routesDB)
                 val uiState by transitViewModel.uiState.collectAsState()
 
                 LaunchedEffect(Unit) {
@@ -336,7 +338,7 @@ private fun getNearbyStops(allStops: MutableList<StopObject>, location: LatLng?)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PortraitUI(
+fun PortraitUI(
     mapComposable: @Composable () -> Unit,
     stops: List<StopObject>,
     stopType: String,
@@ -407,6 +409,7 @@ private fun PortraitUI(
                                         shape = RoundedCornerShape(50.dp),
                                         singleLine = true,
                                         textStyle = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.testTag("Search Bar")
 
                                     )
 
@@ -484,6 +487,9 @@ private fun PortraitUI(
                             if(searchResults.value.isNotEmpty()){
                                 Log.d("@@@", "displaying search results")
                                 SearchResultsList(searchResults.value)
+                                for(result in searchResults.value){
+                                    result.location?.let { transitViewModel.addMarker(it) }
+                                }
                                 RoutesMain(transitViewModel)
                                 StopRow(stops, stopType)
                                 BulletinsMain()
@@ -523,7 +529,7 @@ private fun PortraitUI(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LandscapeUI(
+fun LandscapeUI(
     mapComposable: @Composable () -> Unit,
     stops: List<StopObject>,
     stopType: String,
@@ -866,6 +872,7 @@ fun RoutesMain(transitViewModel: TransitViewModel) {
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(20)
                 )
+                .testTag("View Route Info")
                 .border(
                     width = 2.dp,
                     color = MaterialTheme.colorScheme.primaryContainer,
