@@ -83,19 +83,21 @@ class WTAApi {
             val content = connection.getInputStream().bufferedReader().readText()
 
             try {
-
-                if (content.trim().startsWith("{") || content.trim().startsWith("[")){
+                if (content.trim().equals("\"No service bulletins found.\"")) {
+                    return content
+                }
+                if (content.trim().startsWith("{") || content.trim().startsWith("[") || content.count() == 58){
                     return content
                 }else{
-                    Log.d("ERROR", errWTA)
+                    Log.d("CALLAPI - ERROR1", errWTA)
                     return null
                 }
 
             } catch(e: JSONException) {
-                Log.d("ERROR", errWTA)
+                Log.d("CALLAPI - ERROR2", errWTA)
                 return null
             } catch(e: FileNotFoundException) {
-                Log.d("ERROR", errMsg)
+                Log.d("CALLAPI - ERROR3", errMsg)
                 return null
             }
 
@@ -137,6 +139,7 @@ class WTAApi {
 
 
             if (json == null) {
+                Log.d("WTAAPI - getStop()","Recieved nothing from api")
                 return null
             } else {
                 val jsonArray = JSONArray(json)
@@ -151,6 +154,7 @@ class WTAApi {
                 val stop = StopObject(id = id, name = name, lat = latitude, long = longitude,
                     stopNum = sNum)
 
+                Log.d("WTAAPI", "Loaded stop info")
                 return stop
             }
         }
@@ -277,6 +281,8 @@ class WTAApi {
 
             if (json == null) {
                 return emptyList()
+            } else if (json.trim().equals("\"No service bulletins found.\"")) {
+                return bulls
             } else {
                 val jsonArray = JSONArray(json)
                 for (b in 0..<jsonArray.length()) {
