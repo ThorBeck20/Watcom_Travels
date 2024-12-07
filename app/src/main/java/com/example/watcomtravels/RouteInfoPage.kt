@@ -69,10 +69,9 @@ class RouteInfoPage : ComponentActivity() {
             finish()
         }
 
-        val allStops = dbSearch(this)
-        val routesDB = dbRoutes(this)
-        val stopsDB = dbStops(this)
-
+        val searchDb = dbSearch(this)
+        val stopsDb = dbStops(this)
+        val routesDb = dbRoutes(this)
 
         setContent {
             AppTheme (darkMode){
@@ -279,7 +278,7 @@ class RouteInfoPage : ComponentActivity() {
 
                         val patternState = remember { mutableStateOf(false) }
 
-                        val routePattern = routesDB.getRoute(route!!.routeNum)
+                        val routePattern = routesDb.getRoute(route!!.routeNum)
 
                         if(routePattern != null){
                             route!!.pattern = routePattern
@@ -306,9 +305,9 @@ class RouteInfoPage : ComponentActivity() {
                                 )
                             }
                         }else{
-                            val transitViewModel = TransitViewModel(this@RouteInfoPage, allStops, stopsDB, routesDB)
+                            val transitViewModel = TransitViewModel(this@RouteInfoPage, searchDb, stopsDb, routesDb)
                             transitViewModel.updateSelectedRoute(route!!)
-                            val mapComposable = @Composable { TransitMap(transitViewModel) }
+                            val mapComposable = @Composable { TransitMap(this@RouteInfoPage, transitViewModel) }
 
                             mapComposable.invoke()
                         }

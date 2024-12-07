@@ -90,7 +90,7 @@ class StopInfoPage : ComponentActivity() {
             val transitViewModel = TransitViewModel(context = this@StopInfoPage, searchDB, stopDB, routeDB)
             val uiState by transitViewModel.uiState.collectAsState()
 
-            val mapComposable = @Composable { TransitMap(transitViewModel) }
+            val mapComposable = @Composable { TransitMap(this@StopInfoPage, transitViewModel) }
             transitViewModel.loaded()
 
             var stop by remember { mutableStateOf<StopObject?>(null) }
