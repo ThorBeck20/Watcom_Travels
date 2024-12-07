@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMapOptions
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLngBounds
@@ -40,7 +41,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 
 @Composable
 fun TransitMap(viewModel: TransitViewModel =
@@ -126,6 +126,7 @@ fun TransitMap(viewModel: TransitViewModel =
                     viewModel.selectMarker(state)
                     true
                 },
+                zIndex = 1f,
                 onInfoWindowClose = {
                     viewModel.deselectMarker()
                 }

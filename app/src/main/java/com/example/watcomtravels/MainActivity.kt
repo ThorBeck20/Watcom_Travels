@@ -161,7 +161,7 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(true) {
                 withContext(Dispatchers.IO){
                     location = getLastKnownLocation()
-                    val startingCameraPosition = location?.let { CameraPosition(it, 10f, 0f, 0f) }
+                    val startingCameraPosition = location?.let { CameraPosition(it, 14f, 0f, 0f) }
                     if (startingCameraPosition != null) {
                         transitViewModel.updateCameraPosition(startingCameraPosition)
                     }
@@ -519,17 +519,13 @@ fun PortraitUI(
                             .padding(innerPadding),
                         contentAlignment = Alignment.Center
                     ) {
-
-
+                        for (stop in stops) {
+                            transitViewModel.addMarker(stop)
+                        }
                         mapComposable.invoke()
-
                     }
                 }
-
-
-
             }
-
         }
     }
 
@@ -639,8 +635,9 @@ fun LandscapeUI(
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center
                 ) {
-
-
+                    for (stop in stops) {
+                        transitViewModel.addMarker(stop)
+                    }
                     mapComposable.invoke()
 
                 }

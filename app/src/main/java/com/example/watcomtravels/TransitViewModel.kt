@@ -35,7 +35,7 @@ data class TransitUiState(
     val dbSearch: dbSearch,
     val dbStops: dbStops,
     val dbRoutes: dbRoutes,
-    val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 11f),
+    val cameraPosition: CameraPosition = CameraPosition.fromLatLngZoom(LatLng(48.769768, -122.485886), 14f),
     val displayedMarkers: MutableMap<MarkerState, MarkerOptions> = mutableMapOf<MarkerState, MarkerOptions>(),
     val selectedMarker: MarkerState? = null,
     val userMarker: Pair<MarkerState, MarkerOptions>? = null,
