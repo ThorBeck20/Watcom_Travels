@@ -53,8 +53,6 @@ fun TransitMap(viewModel: TransitViewModel =
     val uiState by viewModel.uiState.collectAsState()
     val scope : CoroutineScope = rememberCoroutineScope()
 
-    viewModel.loaded()
-
     val cameraPositionState : CameraPositionState = rememberCameraPositionState {
         position = uiState.cameraPosition
     }
@@ -85,61 +83,60 @@ fun TransitMap(viewModel: TransitViewModel =
         )
     }
 
-    if (uiState.isLoaded) {
-        GoogleMap(
-            properties = mapProperties,
-            uiSettings = mapUiSettings,
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            onMapLoaded = { viewModel.loaded() },
-            googleMapOptionsFactory = {
-                GoogleMapOptions().mapId("map1")
-            },
-            onMapClick = { latLng ->
-                viewModel.addMarker(latLng)
-            }
-        ) {
-            // Render Markers
-            uiState.displayedMarkers.forEach { (markerState, mOptions) ->
-                Marker(
-                    state = markerState,
-                    title = mOptions.title,
-                    icon = mOptions.icon,
-                    anchor = Offset(mOptions.anchorU, mOptions.anchorV),
-                    flat = true,
-                    onClick = {
-                        viewModel.selectMarker(markerState)
-                        true
-                    },
-                    onInfoWindowClose = {
-                        viewModel.deselectMarker()
-                    }
-                )
-            }
-
-            // Renders Selected Marker
-            uiState.selectedMarker?.let { selected ->
-                val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
-                viewModel.updateCameraPosition(camPos)
-                Box(
-                    modifier = Modifier,
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Text(text = "Hi")
+    GoogleMap(
+        properties = mapProperties,
+        uiSettings = mapUiSettings,
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        onMapLoaded = {
+            viewModel.loaded()
+            Log.d("Transit Map Composable", "Loaded!")
+                      },
+        googleMapOptionsFactory = {
+            GoogleMapOptions().mapId("map1")
+        },
+        onMapClick = { latLng ->
+            viewModel.addMarker(latLng)
+        }
+    ) {
+        // Render Markers
+        uiState.displayedMarkers.forEach { (markerState, mOptions) ->
+            Marker(
+                state = markerState,
+                title = mOptions.title,
+                icon = mOptions.icon,
+                anchor = Offset(mOptions.anchorU, mOptions.anchorV),
+                flat = true,
+                onClick = {
+                    viewModel.selectMarker(markerState)
+                    true
+                },
+                onInfoWindowClose = {
+                    viewModel.deselectMarker()
                 }
-            }
+            )
+        }
 
-            // Updates the polyLine
-            uiState.polylineOptions?.let { polylineOptions ->
-                Polyline(
-                    points = polylineOptions.points,
-                    color = Color.Black
-                )
-
+        // Renders Selected Marker
+        uiState.selectedMarker?.let { selected ->
+            val camPos = CameraPosition.fromLatLngZoom(selected.position, 10f)
+            viewModel.updateCameraPosition(camPos)
+            Box(
+                modifier = Modifier,
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Text(text = "Hi")
             }
         }
-    } else {
-        CircularProgressIndicator()
+
+        // Updates the polyLine
+        uiState.polylineOptions?.let { polylineOptions ->
+            Polyline(
+                points = polylineOptions.points,
+                color = Color.Black
+            )
+
+        }
     }
 
 
