@@ -86,25 +86,44 @@ class StopInfoPage : ComponentActivity() {
                     256.dp
                 }
 
-            // Create a new ViewModel for the new Activity
-            val transitViewModel = TransitViewModel(context = this@StopInfoPage, searchDB, stopDB, routeDB)
-            val uiState by transitViewModel.uiState.collectAsState()
+                // Create a new ViewModel for the new Activity
+                val transitViewModel = TransitViewModel(context = this@StopInfoPage, searchDB, stopDB, routeDB)
+                val uiState by transitViewModel.uiState.collectAsState()
 
-            val mapComposable = @Composable { TransitMap(this@StopInfoPage, transitViewModel) }
-            transitViewModel.loaded()
+                val mapComposable = @Composable { TransitMap(this@StopInfoPage, transitViewModel) }
+
 
             var stop by remember { mutableStateOf<StopObject?>(null) }
+                var stop by remember { mutableStateOf<StopObject?>(null) }
+                stop = searchDB.getSearch(stopNum)
 
-            LaunchedEffect(Unit){
-                withContext(Dispatchers.IO){
-                    val fetchedStop = WTAApi.getStop(stopNum)!!
-                    withContext(Dispatchers.Main){
-                        Log.d("@@Stop Info Page@@", "$fetchedStop")
-                        stop = fetchedStop
-                        transitViewModel.displayStop(stop!!.stopNum)
+                LaunchedEffect(Unit){
+                    withContext(Dispatchers.IO) {
+                        if (stop == null) {
+                            val fetchedStop = WTAApi.getStop(stopNum)!!
+                            withContext(Dispatchers.Main){
+                                Log.d("@@Stop Info Page@@", "$fetchedStop")
+                                stop = fetchedStop
+//                                transitViewModel.loaded()
+                                if(transitViewModel.isLoaded()) {
+                                    transitViewModel.displayStop(stop!!)
+                                } else {
+
+                                }
+                            }
+                        } else {
+                            withContext(Dispatchers.Main){
+                                Log.d("@@Stop Info Page@@", "$stop")
+//                                transitViewModel.loaded()
+                                if(transitViewModel.isLoaded()) {
+                                    transitViewModel.displayStop(stop!!)
+                                } else {
+
+                                }
+                            }
+                        }
                     }
                 }
-            }
                 if(stop == null){
                     Box(
                         modifier = Modifier.fillMaxSize()
