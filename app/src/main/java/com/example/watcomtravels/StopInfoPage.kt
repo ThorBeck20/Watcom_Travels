@@ -72,6 +72,12 @@ class StopInfoPage : ComponentActivity() {
             12
         }
 
+        // Gets Databases
+        val stopDB = dbStops(this@StopInfoPage)
+        val searchDB = dbSearch(this@StopInfoPage)
+        val routeDB = dbRoutes(this@StopInfoPage)
+
+
         setContent {
             AppTheme (darkMode){
                 val sheetPeekHeight = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -81,7 +87,7 @@ class StopInfoPage : ComponentActivity() {
                 }
 
             // Create a new ViewModel for the new Activity
-            val transitViewModel = TransitViewModel(context = this@StopInfoPage)
+            val transitViewModel = TransitViewModel(context = this@StopInfoPage, searchDB, stopDB, routeDB)
             val uiState by transitViewModel.uiState.collectAsState()
 
             val mapComposable = @Composable { TransitMap(transitViewModel) }
@@ -131,7 +137,6 @@ class StopInfoPage : ComponentActivity() {
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 20.sp
                                         )
-                                        val stopDB = dbStops(this@StopInfoPage)
 
                                         var favorited by rememberSaveable { mutableStateOf(false) }
                                         favorited = stopDB.findStop(stopNum)
