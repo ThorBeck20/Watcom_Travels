@@ -40,12 +40,19 @@ class ViewModelTests {
     @Mock
     private lateinit var viewModel : TransitViewModel
 
+    @Mock
+    private lateinit var dbSearch: dbSearch
+    @Mock
+    private lateinit var dbStops: dbStops
+    @Mock
+    private lateinit var dbRoutes: dbRoutes
+
     private var context : Context = mock(Context::class.java)
 
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
-        viewModel = TransitViewModel(context)
+        viewModel = TransitViewModel(context, dbSearch, dbStops, dbRoutes)
         viewModel._uiState = uiState
     }
 
@@ -54,7 +61,13 @@ class ViewModelTests {
         val latLng = LatLng(48.0, -122.0)
 
         val initialUiState =
-            TransitUiState(displayedMarkers = mutableMapOf<MarkerState, MarkerOptions>())
+            TransitUiState(
+                displayedMarkers = mutableMapOf<MarkerState, MarkerOptions>(),
+                context = context,
+                dbSearch = dbSearch,
+                dbStops = dbStops,
+                dbRoutes = dbRoutes
+            )
         `when`(uiState.value).thenReturn(initialUiState)
 
         val markerState = viewModel.addMarker(latLng)
