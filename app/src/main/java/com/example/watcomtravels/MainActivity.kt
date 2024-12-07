@@ -154,7 +154,7 @@ class MainActivity : ComponentActivity() {
                 }
 
 
-            val mapComposable = @Composable { TransitMap(this@MainActivity, transitViewModel) }
+            val mapComposable = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
 
             LaunchedEffect(true) {
@@ -171,6 +171,8 @@ class MainActivity : ComponentActivity() {
                 if(location == null){
                     location = LatLng(48.769768, -122.485886)
                 }
+
+                transitViewModel.displayUser(location!!)
 
                 val nearbyStops: List<StopObject>? = searchDb.ltlnSearch(location!!.latitude, location!!.longitude)
                 val items =
