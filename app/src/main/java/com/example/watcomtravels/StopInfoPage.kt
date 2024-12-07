@@ -53,11 +53,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.watcomtravels.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.time.withTimeoutOrNull
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+
+suspend fun test(): String {
+    delay(3000L)
+    return "test finished"
+}
 
 class StopInfoPage : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) = runBlocking {
         super.onCreate(savedInstanceState)
 
         val stopNum = intent.getIntExtra("stopNum", 0)
@@ -94,6 +103,19 @@ class StopInfoPage : ComponentActivity() {
 
                 var stop by remember { mutableStateOf<StopObject?>(null) }
                 stop = searchDB.getSearch(stopNum)
+
+                LaunchedEffect(true) {
+                    val result = withTimeoutOrNull(3000L) {
+                        test()
+                    }
+                    withContext(Dispatchers.Main) {
+                        result?.let {
+                            Log.d("Stop Info Page", it)
+                            transitViewModel.loaded()
+                        } ?: Log.d("Stop Info apag", "Fail")
+                        transitViewModel.loaded()
+                    }
+                }
 
                 LaunchedEffect(Unit){
                     withContext(Dispatchers.IO) {

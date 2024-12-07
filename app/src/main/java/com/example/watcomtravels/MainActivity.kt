@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -154,7 +155,7 @@ class MainActivity : ComponentActivity() {
                 }
 
 
-            val mapComposable = @Composable { TransitMap(transitViewModel) }
+            val mapComposable : @Composable () -> Unit = @Composable { TransitMap(transitViewModel) }
             var location: LatLng? = null
 
             LaunchedEffect(true) {
