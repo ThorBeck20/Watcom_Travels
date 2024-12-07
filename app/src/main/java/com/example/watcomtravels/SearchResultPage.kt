@@ -80,7 +80,7 @@ class SearchResultPage : ComponentActivity() {
                     TransitViewModel(context = this@SearchResultPage, searchDB, stopDB, routeDB)
                 val uiState by transitViewModel.uiState.collectAsState()
 
-                transitViewModel.addMarker(latLng)
+                transitViewModel.displayUser(latLng)
 
                 val mapComposable = @Composable { TransitMap(transitViewModel) }
                 transitViewModel.loaded()
